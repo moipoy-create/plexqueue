@@ -9,6 +9,8 @@
 <meta name="apple-mobile-web-app-title" content="PlexQueue">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="description" content="Gestiona las peticiones de contenido para tu Plex">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src * data:; font-src * data:; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval';">
+<meta http-equiv="Access-Control-Allow-Origin" content="*">
 <title>PlexQueue</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -416,6 +418,15 @@ body{
   background:none;border:none;color:var(--t3);
   cursor:pointer;font-size:16px;padding:2px;flex-shrink:0;
 }
+
+.name-btn{
+  width:100%;background:var(--s3);border:1px solid var(--border2);
+  color:var(--t2);padding:11px 14px;border-radius:var(--r12);
+  font-size:14px;font-family:'Inter',sans-serif;font-weight:500;
+  cursor:pointer;transition:all .2s;text-align:left;
+}
+.name-btn:hover{border-color:var(--border3);color:var(--t1)}
+.name-btn.selected{background:var(--accent2);border-color:var(--accent2);color:#fff;font-weight:600}
 </style>
 </head>
 <body>
@@ -515,8 +526,12 @@ body{
         </div>
 
         <div class="field">
-          <div class="flabel">Tu nombre</div>
-          <input class="finput" id="req-name" type="text" placeholder="¿Cómo te llamas?">
+          <div class="flabel">¿Quién eres?</div>
+          <div style="display:flex;flex-direction:column;gap:8px" id="name-btns">
+            <button type="button" class="name-btn" onclick="selName('Javi')">Javi</button>
+            <button type="button" class="name-btn" onclick="selName('Arma')">Arma</button>
+          </div>
+          <input type="hidden" id="req-name" value="">
         </div>
         <div class="rsh-actions">
           <button class="btn-cncl" onclick="closeSheet()">
@@ -621,8 +636,8 @@ body{
 
 <script>
 // ── CONFIG ── Cambia estos valores si quieres
-const ADMIN_PIN = '1956';
-const TMDB_KEY  = '8c4b23e691fd970d8526c45b6ebebc1';
+const ADMIN_PIN = '1234';
+const TMDB_KEY  = 'd74e2dd1ee6ec34159cbc3ebc426f6f0';
 // ─────────────
 
 const API  = 'https://api.themoviedb.org/3';
@@ -673,14 +688,20 @@ function updNav() {
 }
 
 // ── TMDB: POPULAR ──
+async function tmdbGet(path) {
+  const url = `${API}${path}${path.includes('?')?'&':'?'}api_key=${TMDB_KEY}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
 async function loadPop() {
   try {
-    const r = await fetch(`${API}/trending/all/week?api_key=${TMDB_KEY}&language=es-ES`);
-    const d = await r.json();
+    const d = await tmdbGet('/trending/all/week?language=es-ES');
     popular = (d.results || []).filter(x => x.media_type === 'movie' || x.media_type === 'tv').slice(0, 6);
     document.getElementById('pop-grid').innerHTML = popular.map(mCard).join('');
   } catch (e) {
-    document.getElementById('pop-grid').innerHTML = '<div class="ldrow" style="color:var(--t3)">Sin conexión a TMDB</div>';
+    document.getElementById('pop-grid').innerHTML = '<div class="ldrow" style="color:var(--t3)">Error cargando TMDB: ' + e.message + '</div>';
   }
 }
 
@@ -711,8 +732,7 @@ async function doSearch(q) {
   document.getElementById('res-wrap').style.display = 'block';
   document.getElementById('res-grid').innerHTML = `<div class="ldrow"><span class="spin"></span>Buscando...</div>`;
   try {
-    const r = await fetch(`${API}/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(q)}&language=es-ES&page=1`);
-    const d = await r.json();
+    const d = await tmdbGet(`/search/multi?query=${encodeURIComponent(q)}&language=es-ES&page=1`);
     results = (d.results || []).filter(x => x.media_type === 'movie' || x.media_type === 'tv').slice(0, 10);
     document.getElementById('res-cnt').textContent = results.length + ' resultado' + (results.length === 1 ? '' : 's');
     document.getElementById('res-grid').innerHTML = results.length
@@ -753,6 +773,7 @@ function selMovie(id) {
   document.getElementById('s-val').textContent = '1';
   document.getElementById('e-val').textContent = '1';
   document.getElementById('req-name').value = '';
+  document.querySelectorAll('.name-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('rsheet').classList.add('open');
   document.getElementById('rsheet').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   setTimeout(() => document.getElementById('req-name').focus(), 200);
@@ -774,6 +795,14 @@ function toggleEp() {
 function adj(type, d) {
   if (type === 's') { sVal = Math.max(1, sVal + d); document.getElementById('s-val').textContent = sVal; }
   else              { eVal = Math.max(1, eVal + d); document.getElementById('e-val').textContent = eVal; }
+}
+
+// ── NAME SELECTOR ──
+function selName(name) {
+  document.getElementById('req-name').value = name;
+  document.querySelectorAll('.name-btn').forEach(b => {
+    b.classList.toggle('selected', b.textContent === name);
+  });
 }
 
 // ── ADD TO QUEUE ──
