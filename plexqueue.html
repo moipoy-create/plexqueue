@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#080810">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PlexQueue">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="description" content="Gestiona las peticiones de contenido para tu Plex">
+<title>PlexQueue</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#080810;--s1:#0f0f1a;--s2:#16162a;--s3:#1e1e32;--s4:#252540;
+  --accent:#a78bfa;--accent2:#7c3aed;--accent3:#6d28d9;
+  --gold:#e8c97a;--green:#34d399;--red:#f87171;--blue:#60a5fa;
+  --t1:#f0f0ff;--t2:#9999bb;--t3:#55556a;
+  --border:#ffffff0d;--border2:#ffffff16;--border3:#ffffff24;
+  --r8:8px;--r12:12px;--r16:16px;--r20:20px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--t1);
+  font-family:'Inter',system-ui,sans-serif;
+  min-height:100vh;font-size:14px;
+  overscroll-behavior:none;
+}
+.app{
+  display:flex;flex-direction:column;
+  min-height:100vh;max-width:430px;
+  margin:0 auto;position:relative;
+}
+
+/* ── HEADER ── */
+.hdr{
+  padding:calc(16px + env(safe-area-inset-top,0px)) 20px 0;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:50;
+  background:var(--bg);
+}
+.brand{display:flex;align-items:center;gap:9px}
+.brand-icon{
+  width:34px;height:34px;background:var(--accent2);
+  border-radius:9px;display:flex;align-items:center;
+  justify-content:center;font-size:15px;color:#fff;
+}
+.brand-name{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;letter-spacing:-.5px}
+.brand-name em{color:var(--accent);font-style:normal}
+.hdr-pin-hint{font-size:11px;color:var(--t3);display:flex;align-items:center;gap:4px;cursor:pointer;padding:6px 10px;border-radius:20px;border:1px solid var(--border);background:var(--s2);transition:all .2s}
+.hdr-pin-hint:hover{border-color:var(--border3);color:var(--t2)}
+
+/* ── NAV ── */
+.nav{
+  padding:14px 20px 0;display:flex;gap:6px;
+  position:sticky;top:calc(52px + env(safe-area-inset-top,0px));
+  z-index:40;background:var(--bg);
+}
+.nav-tab{
+  flex:1;background:var(--s2);border:1px solid var(--border);
+  border-radius:var(--r12);padding:9px 6px;text-align:center;
+  cursor:pointer;transition:all .2s;font-size:11px;font-weight:500;
+  color:var(--t3);display:flex;flex-direction:column;align-items:center;gap:3px;
+  user-select:none;
+}
+.nav-tab i{font-size:17px}
+.nav-tab.active{background:var(--accent2);border-color:var(--accent2);color:#fff}
+.ntc{
+  background:#ffffff22;font-size:10px;font-weight:600;
+  padding:1px 6px;border-radius:10px;min-width:18px;
+  display:inline-block;
+}
+.nav-tab.active .ntc{background:#ffffff33}
+
+/* ── MAIN ── */
+.main{flex:1;padding:16px 20px calc(32px + var(--safe-bottom))}
+.view{display:none}.view.active{display:block}
+
+/* ── SEARCH HERO ── */
+.search-hero{margin-bottom:18px}
+.sh-title{font-family:'Syne',sans-serif;font-size:21px;font-weight:700;line-height:1.2;margin-bottom:3px}
+.sh-title span{color:var(--accent)}
+.sh-sub{font-size:12px;color:var(--t3)}
+
+/* ── SEARCH BOX ── */
+.sbox{position:relative;margin-bottom:18px}
+.sinput{
+  width:100%;background:var(--s2);border:1px solid var(--border2);
+  color:var(--t1);padding:13px 44px 13px 42px;border-radius:var(--r16);
+  font-size:15px;font-family:'Inter',sans-serif;outline:none;transition:all .2s;
+}
+.sinput:focus{border-color:var(--accent2);background:var(--s3)}
+.sinput::placeholder{color:var(--t3)}
+.sico{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--t3);font-size:17px;pointer-events:none;transition:color .2s}
+.sbox:focus-within .sico{color:var(--accent)}
+.sclear{
+  position:absolute;right:13px;top:50%;transform:translateY(-50%);
+  color:var(--t3);font-size:14px;cursor:pointer;background:none;border:none;
+  display:none;padding:4px;
+}
+.sclear.on{display:block}
+
+/* ── SECTION HEADER ── */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.sec-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.9px}
+.sec-count{font-size:11px;color:var(--t3)}
+
+/* ── RESULTS GRID ── */
+.rgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:22px}
+.rcard{
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:var(--r16);overflow:hidden;cursor:pointer;
+  transition:all .22s;position:relative;
+}
+.rcard:hover{border-color:var(--border3);transform:translateY(-2px)}
+.rcard:active{transform:scale(.97)}
+.rcard.inq{border-color:#34d39945}
+.rposter{width:100%;aspect-ratio:2/3;object-fit:cover;display:block;background:var(--s3)}
+.rposter-ph{
+  width:100%;aspect-ratio:2/3;background:var(--s3);
+  display:flex;align-items:center;justify-content:center;color:var(--t3);
+}
+.rbody{padding:9px 11px}
+.rtitle{font-size:12px;font-weight:600;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.rmeta{font-size:11px;color:var(--t3)}
+.pill-inq{
+  position:absolute;top:7px;left:7px;
+  background:var(--green);color:#052e16;
+  font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;
+}
+.pill-type{
+  position:absolute;top:7px;right:7px;
+  background:#00000077;color:#fff;
+  font-size:9px;font-weight:600;padding:2px 7px;border-radius:20px;
+  border:1px solid #ffffff1a;
+}
+
+/* ── REQUEST SHEET ── */
+.rsheet{
+  background:var(--s2);border:1px solid var(--border2);
+  border-radius:var(--r20);padding:16px;
+  margin-bottom:16px;display:none;
+}
+.rsheet.open{display:block}
+.rsh-top{display:flex;gap:13px;margin-bottom:14px;align-items:flex-start}
+.rsh-poster{width:54px;height:81px;border-radius:9px;object-fit:cover;background:var(--s3);flex-shrink:0}
+.rsh-info{flex:1;min-width:0}
+.rsh-ttl{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:3px;line-height:1.2}
+.rsh-yr{font-size:12px;color:var(--t3);margin-bottom:6px}
+.rsh-score{
+  display:inline-flex;align-items:center;gap:4px;
+  background:var(--s3);border:1px solid var(--border);
+  padding:3px 8px;border-radius:20px;font-size:11px;color:var(--gold);
+}
+
+/* ── FIELDS ── */
+.field{margin-bottom:12px}
+.flabel{font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:5px}
+.finput{
+  width:100%;background:var(--s3);border:1px solid var(--border2);
+  color:var(--t1);padding:10px 13px;border-radius:var(--r12);
+  font-size:14px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s;
+}
+.finput:focus{border-color:var(--accent2)}
+.finput::placeholder{color:var(--t3)}
+
+/* ── EPISODE SELECTOR ── */
+.ep-toggle{display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;user-select:none}
+.toggle-track{
+  width:34px;height:20px;background:var(--s3);
+  border:1px solid var(--border2);border-radius:10px;
+  position:relative;transition:all .2s;flex-shrink:0;
+}
+.toggle-track.on{background:var(--accent2);border-color:var(--accent2)}
+.toggle-thumb{
+  position:absolute;top:3px;left:3px;
+  width:12px;height:12px;border-radius:50%;
+  background:#fff;transition:transform .2s;
+}
+.toggle-track.on .toggle-thumb{transform:translateX(14px)}
+.toggle-label{font-size:13px;color:var(--t2)}
+
+.ep-row{display:flex;gap:8px}
+.ep-field{flex:1}
+.ep-spinbox{
+  display:flex;align-items:center;background:var(--s3);
+  border:1px solid var(--border2);border-radius:var(--r12);overflow:hidden;height:40px;
+}
+.ep-btn{
+  width:36px;height:100%;background:none;border:none;color:var(--t2);
+  font-size:18px;cursor:pointer;transition:all .15s;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.ep-btn:hover{background:var(--s4);color:var(--accent)}
+.ep-val{flex:1;text-align:center;font-size:14px;font-weight:600;color:var(--t1)}
+
+/* ── SHEET ACTIONS ── */
+.rsh-actions{display:flex;gap:8px}
+.btn-add{
+  flex:1;background:var(--accent2);color:#fff;border:none;
+  padding:12px;border-radius:var(--r12);font-size:13px;
+  font-family:'Inter',sans-serif;font-weight:600;cursor:pointer;
+  transition:all .2s;display:flex;align-items:center;justify-content:center;gap:5px;
+}
+.btn-add:hover{background:var(--accent3)}
+.btn-add:active{transform:scale(.97)}
+.btn-cncl{
+  background:var(--s3);color:var(--t2);border:1px solid var(--border);
+  padding:12px 14px;border-radius:var(--r12);font-size:13px;
+  font-family:'Inter',sans-serif;cursor:pointer;transition:all .2s;
+}
+.btn-cncl:hover{border-color:var(--border3)}
+
+/* ── QUEUE ITEMS ── */
+.qitem{
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:var(--r16);padding:11px 13px;
+  display:flex;align-items:center;gap:11px;
+  margin-bottom:8px;transition:all .2s;position:relative;
+}
+.qitem.avail{border-color:#34d39930;background:#052e1608}
+.qposter{width:40px;height:60px;object-fit:cover;border-radius:7px;flex-shrink:0;background:var(--s3)}
+.qposter-ph{
+  width:40px;height:60px;background:var(--s3);
+  border-radius:7px;display:flex;align-items:center;
+  justify-content:center;color:var(--t3);flex-shrink:0;
+}
+.qinfo{flex:1;min-width:0}
+.qtitle{font-size:13px;font-weight:600;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.qmeta{font-size:11px;color:var(--t3);margin-bottom:2px}
+.qmeta .who{color:var(--accent);font-weight:500}
+.qep{font-size:11px;color:var(--blue);font-weight:500;display:flex;align-items:center;gap:3px}
+.qright{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+.pill-pend{background:#7c3aed22;color:var(--accent);font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.pill-ok{
+  background:#34d39920;color:var(--green);font-size:10px;
+  font-weight:600;padding:3px 9px;border-radius:20px;
+  white-space:nowrap;display:flex;align-items:center;gap:3px;
+}
+
+/* ── NOTE BELL (user view) ── */
+.note-btn{
+  background:none;border:none;cursor:pointer;
+  padding:2px 4px;line-height:1;font-size:15px;
+  transition:all .2s;color:var(--t3);position:relative;
+}
+.note-btn.has-note{color:var(--gold)}
+.note-bubble{
+  display:none;position:absolute;
+  bottom:calc(100% + 6px);right:0;
+  background:var(--s4);border:1px solid var(--border3);
+  border-radius:var(--r12);padding:10px 13px;
+  min-width:180px;max-width:220px;
+  font-size:12px;color:var(--t1);line-height:1.4;
+  white-space:normal;z-index:20;text-align:left;
+}
+.note-bubble::after{
+  content:'';position:absolute;bottom:-5px;right:10px;
+  width:8px;height:8px;background:var(--s4);
+  border-right:1px solid var(--border3);border-bottom:1px solid var(--border3);
+  transform:rotate(45deg);
+}
+.note-btn.has-note:focus .note-bubble,
+.note-btn.has-note.open .note-bubble{display:block}
+
+/* ── ADMIN PIN ── */
+.pin-wrap{
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;min-height:60vh;gap:14px;text-align:center;
+}
+.pin-icon{
+  width:56px;height:56px;background:var(--s2);
+  border:1px solid var(--border2);border-radius:var(--r20);
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;margin-bottom:2px;
+}
+.pin-ttl{font-family:'Syne',sans-serif;font-size:19px;font-weight:700}
+.pin-sub{font-size:12px;color:var(--t3);max-width:200px}
+.pin-dots{display:flex;gap:9px}
+.pd{width:13px;height:13px;border-radius:50%;background:var(--s3);border:1.5px solid var(--border2);transition:all .2s}
+.pd.on{background:var(--accent);border-color:var(--accent)}
+.pin-err{color:var(--red);font-size:12px;height:16px;transition:opacity .2s}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;width:210px}
+.pk{
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:var(--r12);padding:13px;
+  font-size:19px;font-family:'Syne',sans-serif;font-weight:600;
+  color:var(--t1);cursor:pointer;text-align:center;
+  transition:all .15s;user-select:none;
+}
+.pk:active,.pk.pr{background:var(--s3);transform:scale(.93)}
+.pk.del{font-size:14px;color:var(--t3)}
+.pk.zero{grid-column:2}
+
+/* ── ADMIN PANEL ── */
+.adm-panel{display:none}
+.fbar{display:flex;gap:6px;margin-bottom:14px}
+.fbtn{
+  flex:1;background:var(--s2);border:1px solid var(--border);
+  border-radius:var(--r12);padding:9px 6px;text-align:center;
+  cursor:pointer;transition:all .2s;font-size:11px;font-weight:600;
+  color:var(--t3);display:flex;flex-direction:column;align-items:center;gap:2px;
+}
+.fbtn.act{background:var(--s3);border-color:var(--border3);color:var(--t1)}
+.fnum{font-size:18px;font-family:'Syne',sans-serif;font-weight:700}
+.fbtn.act .fnum{color:var(--accent)}
+
+.adm-item{
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:var(--r16);padding:11px 13px;
+  display:flex;align-items:flex-start;gap:11px;margin-bottom:8px;
+}
+.adm-item.avail{border-color:#34d39930;background:#052e1608}
+.adm-mid{flex:1;min-width:0}
+.adm-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0;align-items:flex-end}
+.btn-done{
+  background:var(--s3);border:1px solid var(--border);color:var(--t2);
+  padding:5px 10px;border-radius:7px;font-size:11px;font-weight:600;
+  cursor:pointer;transition:all .2s;white-space:nowrap;
+  font-family:'Inter',sans-serif;display:flex;align-items:center;gap:4px;
+}
+.btn-done:hover{border-color:var(--green);color:var(--green)}
+.btn-del{
+  background:none;border:none;color:var(--t3);font-size:14px;
+  cursor:pointer;padding:2px 3px;transition:color .2s;
+  font-family:'Inter',sans-serif;
+}
+.btn-del:hover{color:var(--red)}
+.btn-note{
+  background:none;border:1px solid var(--border);color:var(--t3);
+  padding:5px 9px;border-radius:7px;font-size:11px;font-weight:600;
+  cursor:pointer;transition:all .2s;white-space:nowrap;
+  font-family:'Inter',sans-serif;display:flex;align-items:center;gap:4px;
+}
+.btn-note:hover{border-color:var(--gold);color:var(--gold)}
+.btn-note.active{border-color:var(--gold);color:var(--gold);background:#e8c97a0d}
+
+/* ── NOTE EDITOR (admin) ── */
+.note-editor{
+  background:var(--s3);border:1px solid var(--border2);
+  border-radius:var(--r12);padding:10px;margin-top:8px;display:none;
+}
+.note-editor.open{display:block}
+.note-ta{
+  width:100%;background:var(--s4);border:1px solid var(--border2);
+  color:var(--t1);padding:9px 12px;border-radius:9px;
+  font-size:13px;font-family:'Inter',sans-serif;
+  outline:none;resize:none;min-height:64px;transition:border-color .2s;
+}
+.note-ta:focus{border-color:var(--accent2)}
+.note-ta::placeholder{color:var(--t3)}
+.note-acts{display:flex;gap:6px;margin-top:8px;justify-content:flex-end}
+.btn-save-note{
+  background:var(--accent2);color:#fff;border:none;
+  padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;
+  cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;
+}
+.btn-save-note:hover{background:var(--accent3)}
+.btn-clr-note{
+  background:var(--s4);border:1px solid var(--border);color:var(--t3);
+  padding:7px 12px;border-radius:8px;font-size:12px;
+  cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;
+}
+.btn-clr-note:hover{border-color:var(--red);color:var(--red)}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:44px 16px}
+.empty i{font-size:32px;opacity:.2;display:block;margin-bottom:8px}
+.empty-t{font-size:13px;color:var(--t3)}
+
+/* ── TOAST ── */
+.toast{
+  position:fixed;bottom:calc(20px + var(--safe-bottom));left:50%;
+  transform:translateX(-50%) translateY(70px);
+  background:var(--s2);border:1px solid var(--border2);
+  padding:11px 18px;border-radius:var(--r12);font-size:13px;font-weight:500;
+  color:var(--t1);transition:transform .28s cubic-bezier(.34,1.56,.64,1);
+  z-index:999;pointer-events:none;white-space:nowrap;
+  display:flex;align-items:center;gap:7px;
+}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.ok{border-color:#34d39955;color:var(--green)}
+.toast.warn{border-color:#e8c97a55;color:var(--gold)}
+
+/* ── LOADING ── */
+.spin{
+  display:inline-block;width:14px;height:14px;
+  border:2px solid var(--border2);border-top-color:var(--accent);
+  border-radius:50%;animation:sp .6s linear infinite;
+  vertical-align:middle;margin-right:5px;
+}
+@keyframes sp{to{transform:rotate(360deg)}}
+.ldrow{padding:28px;text-align:center;color:var(--t3);font-size:13px;grid-column:1/-1}
+
+/* ── PWA INSTALL BANNER ── */
+.install-banner{
+  margin:12px 20px 0;padding:11px 14px;
+  background:var(--s2);border:1px solid var(--border2);
+  border-radius:var(--r12);display:none;
+  justify-content:space-between;align-items:center;gap:10px;
+}
+.install-banner.visible{display:flex}
+.install-text{font-size:12px;color:var(--t2);flex:1;line-height:1.4}
+.install-text strong{color:var(--t1);display:block;margin-bottom:1px;font-size:13px}
+.btn-install{
+  background:var(--accent2);color:#fff;border:none;
+  padding:7px 13px;border-radius:8px;font-size:12px;font-weight:600;
+  cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;
+  transition:all .2s;flex-shrink:0;
+}
+.btn-install-close{
+  background:none;border:none;color:var(--t3);
+  cursor:pointer;font-size:16px;padding:2px;flex-shrink:0;
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- INSTALL BANNER (PWA) -->
+  <div class="install-banner" id="install-banner">
+    <div class="install-text">
+      <strong>Instalar PlexQueue</strong>
+      Añádela a tu pantalla de inicio para usarla como app
+    </div>
+    <button class="btn-install" id="btn-install">Instalar</button>
+    <button class="btn-install-close" onclick="document.getElementById('install-banner').classList.remove('visible')" aria-label="Cerrar">
+      <i class="ti ti-x"></i>
+    </button>
+  </div>
+
+  <!-- HEADER -->
+  <div class="hdr">
+    <div class="brand">
+      <div class="brand-icon"><i class="ti ti-player-play"></i></div>
+      <div class="brand-name">Plex<em>Queue</em></div>
+    </div>
+    <div class="hdr-pin-hint" onclick="tab('admin')">
+      <i class="ti ti-shield" style="font-size:13px"></i>
+      <span>Admin</span>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <div class="nav">
+    <div class="nav-tab active" onclick="tab('search')" id="tab-search">
+      <i class="ti ti-search"></i><span>Buscar</span>
+    </div>
+    <div class="nav-tab" onclick="tab('queue')" id="tab-queue">
+      <i class="ti ti-list"></i><span>Cola</span>
+      <span class="ntc" id="nav-c">0</span>
+    </div>
+    <div class="nav-tab" onclick="tab('admin')" id="tab-admin">
+      <i class="ti ti-shield"></i><span>Admin</span>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- ═══ SEARCH VIEW ═══ -->
+    <div class="view active" id="view-search">
+      <div class="search-hero">
+        <div class="sh-title">¿Qué quieres<br>ver en <span>Plex</span>?</div>
+        <div class="sh-sub">Busca una película o serie y añádela</div>
+      </div>
+
+      <!-- Request sheet -->
+      <div class="rsheet" id="rsheet">
+        <div class="rsh-top">
+          <img class="rsh-poster" id="sh-img" src="" alt="">
+          <div class="rsh-info">
+            <div class="rsh-ttl" id="sh-ttl"></div>
+            <div class="rsh-yr" id="sh-yr"></div>
+            <div class="rsh-score">
+              <i class="ti ti-star" style="font-size:11px"></i>
+              <span id="sh-sc">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Episode selector (series only) -->
+        <div id="ep-section" style="display:none">
+          <div class="field">
+            <div class="flabel">Episodio concreto</div>
+            <div class="ep-toggle" onclick="toggleEp()">
+              <div class="toggle-track" id="ep-track"><div class="toggle-thumb"></div></div>
+              <span class="toggle-label" id="ep-label">Quiero un episodio específico</span>
+            </div>
+          </div>
+          <div id="ep-fields" style="display:none">
+            <div class="ep-row">
+              <div class="ep-field">
+                <div class="flabel">Temporada</div>
+                <div class="ep-spinbox">
+                  <button class="ep-btn" onclick="adj('s',-1)"><i class="ti ti-minus" style="font-size:14px"></i></button>
+                  <div class="ep-val" id="s-val">1</div>
+                  <button class="ep-btn" onclick="adj('s',1)"><i class="ti ti-plus" style="font-size:14px"></i></button>
+                </div>
+              </div>
+              <div class="ep-field">
+                <div class="flabel">Capítulo</div>
+                <div class="ep-spinbox">
+                  <button class="ep-btn" onclick="adj('e',-1)"><i class="ti ti-minus" style="font-size:14px"></i></button>
+                  <div class="ep-val" id="e-val">1</div>
+                  <button class="ep-btn" onclick="adj('e',1)"><i class="ti ti-plus" style="font-size:14px"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="flabel">Tu nombre</div>
+          <input class="finput" id="req-name" type="text" placeholder="¿Cómo te llamas?">
+        </div>
+        <div class="rsh-actions">
+          <button class="btn-cncl" onclick="closeSheet()">
+            <i class="ti ti-x" style="font-size:13px"></i>
+          </button>
+          <button class="btn-add" onclick="addToQueue()">
+            <i class="ti ti-plus" style="font-size:15px"></i> Añadir a la cola
+          </button>
+        </div>
+      </div>
+
+      <!-- Search input -->
+      <div class="sbox">
+        <i class="ti ti-search sico"></i>
+        <input class="sinput" id="sinput" type="text" placeholder="Título de película o serie..." autocomplete="off">
+        <button class="sclear" id="sclear" onclick="clearS()" aria-label="Borrar búsqueda">
+          <i class="ti ti-x" style="font-size:13px"></i>
+        </button>
+      </div>
+
+      <div id="res-wrap" style="display:none">
+        <div class="sec-hdr">
+          <span class="sec-title">Resultados</span>
+          <span class="sec-count" id="res-cnt"></span>
+        </div>
+        <div class="rgrid" id="res-grid"></div>
+      </div>
+
+      <div id="pop-wrap">
+        <div class="sec-hdr">
+          <span class="sec-title">Populares ahora</span>
+        </div>
+        <div class="rgrid" id="pop-grid">
+          <div class="ldrow"><span class="spin"></span>Cargando...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ QUEUE VIEW ═══ -->
+    <div class="view" id="view-queue">
+      <div class="sec-hdr" style="margin-bottom:14px">
+        <span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--t1)">Cola de peticiones</span>
+        <span id="q-pill" style="font-size:11px;color:var(--t3);background:var(--s3);border:1px solid var(--border);padding:3px 10px;border-radius:20px">0 títulos</span>
+      </div>
+      <div id="qlist"></div>
+    </div>
+
+    <!-- ═══ ADMIN VIEW ═══ -->
+    <div class="view" id="view-admin">
+
+      <!-- PIN screen -->
+      <div id="pin-screen" class="pin-wrap">
+        <div class="pin-icon"><i class="ti ti-lock" style="color:var(--accent)"></i></div>
+        <div class="pin-ttl">Acceso admin</div>
+        <div class="pin-sub">PIN de 4 dígitos</div>
+        <div class="pin-dots">
+          <div class="pd" id="pd0"></div>
+          <div class="pd" id="pd1"></div>
+          <div class="pd" id="pd2"></div>
+          <div class="pd" id="pd3"></div>
+        </div>
+        <div class="pin-err" id="pin-err"></div>
+        <div class="pin-pad">
+          <div class="pk" onclick="pk('1')">1</div>
+          <div class="pk" onclick="pk('2')">2</div>
+          <div class="pk" onclick="pk('3')">3</div>
+          <div class="pk" onclick="pk('4')">4</div>
+          <div class="pk" onclick="pk('5')">5</div>
+          <div class="pk" onclick="pk('6')">6</div>
+          <div class="pk" onclick="pk('7')">7</div>
+          <div class="pk" onclick="pk('8')">8</div>
+          <div class="pk" onclick="pk('9')">9</div>
+          <div class="pk zero" onclick="pk('0')">0</div>
+          <div class="pk del" onclick="pdel()"><i class="ti ti-backspace" style="font-size:16px"></i></div>
+        </div>
+      </div>
+
+      <!-- Admin panel -->
+      <div class="adm-panel" id="adm-panel">
+        <div class="fbar">
+          <div class="fbtn act" onclick="setF('all',this)">
+            <span class="fnum" id="fn-all">0</span><span>Total</span>
+          </div>
+          <div class="fbtn" onclick="setF('pending',this)">
+            <span class="fnum" id="fn-pend">0</span><span>Pendientes</span>
+          </div>
+          <div class="fbtn" onclick="setF('available',this)">
+            <span class="fnum" id="fn-avail">0</span><span>Listos</span>
+          </div>
+        </div>
+        <div id="adm-list"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span id="t-ico"></span><span id="t-msg"></span>
+</div>
+
+<script>
+// ── CONFIG ── Cambia estos valores si quieres
+const ADMIN_PIN = '1956';
+const TMDB_KEY  = '8c4b23e691fd970d8526c45b6ebebc1';
+// ─────────────
+
+const API  = 'https://api.themoviedb.org/3';
+const IMG  = 'https://image.tmdb.org/t/p/w300';
+const IMGS = 'https://image.tmdb.org/t/p/w185';
+
+let queue    = JSON.parse(localStorage.getItem('pq_v3') || '[]');
+let results  = [];
+let popular  = [];
+let sel      = null;
+let pinV     = '';
+let unlocked = false;
+let curF     = 'all';
+let sTimer   = null;
+let epOn     = false;
+let sVal     = 1;
+let eVal     = 1;
+let noteOpen = null;
+let deferredPrompt = null;
+
+const save = () => localStorage.setItem('pq_v3', JSON.stringify(queue));
+
+// ── TOAST ──
+function toast(msg, type, ico) {
+  const el = document.getElementById('toast');
+  document.getElementById('t-msg').textContent = msg;
+  document.getElementById('t-ico').textContent = ico || '';
+  el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.className = 'toast', 2600);
+}
+
+// ── TABS ──
+function tab(t) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + t).classList.add('active');
+  const tb = document.getElementById('tab-' + t);
+  if (tb) tb.classList.add('active');
+  if (t === 'queue') renderQ();
+  if (t === 'admin' && unlocked) renderAdm();
+}
+
+function updNav() {
+  const n = queue.length;
+  document.getElementById('nav-c').textContent = n;
+  document.getElementById('q-pill').textContent = n + ' título' + (n === 1 ? '' : 's');
+}
+
+// ── TMDB: POPULAR ──
+async function loadPop() {
+  try {
+    const r = await fetch(`${API}/trending/all/week?api_key=${TMDB_KEY}&language=es-ES`);
+    const d = await r.json();
+    popular = (d.results || []).filter(x => x.media_type === 'movie' || x.media_type === 'tv').slice(0, 6);
+    document.getElementById('pop-grid').innerHTML = popular.map(mCard).join('');
+  } catch (e) {
+    document.getElementById('pop-grid').innerHTML = '<div class="ldrow" style="color:var(--t3)">Sin conexión a TMDB</div>';
+  }
+}
+
+// ── MOVIE CARD ──
+function mCard(m) {
+  const title  = m.title || m.name;
+  const year   = (m.release_date || m.first_air_date || '').slice(0, 4);
+  const poster = m.poster_path ? IMG + m.poster_path : null;
+  const inQ    = queue.some(x => x.tmdbId === m.id);
+  const type   = m.media_type === 'tv' ? 'Serie' : 'Película';
+  return `<div class="rcard${inQ ? ' inq' : ''}" onclick="selMovie(${m.id})">
+    ${poster
+      ? `<img class="rposter" src="${poster}" alt="${title.replace(/"/g,'&quot;')}" loading="lazy">`
+      : `<div class="rposter-ph"><i class="ti ti-movie" style="font-size:26px"></i></div>`}
+    ${inQ ? `<div class="pill-inq"><i class="ti ti-check" style="font-size:9px"></i> En cola</div>` : ''}
+    <div class="pill-type">${type}</div>
+    <div class="rbody">
+      <div class="rtitle">${title}</div>
+      <div class="rmeta">${year || '—'}</div>
+    </div>
+  </div>`;
+}
+
+// ── SEARCH ──
+async function doSearch(q) {
+  if (!q) { clearS(); return; }
+  document.getElementById('pop-wrap').style.display = 'none';
+  document.getElementById('res-wrap').style.display = 'block';
+  document.getElementById('res-grid').innerHTML = `<div class="ldrow"><span class="spin"></span>Buscando...</div>`;
+  try {
+    const r = await fetch(`${API}/search/multi?api_key=${TMDB_KEY}&query=${encodeURIComponent(q)}&language=es-ES&page=1`);
+    const d = await r.json();
+    results = (d.results || []).filter(x => x.media_type === 'movie' || x.media_type === 'tv').slice(0, 10);
+    document.getElementById('res-cnt').textContent = results.length + ' resultado' + (results.length === 1 ? '' : 's');
+    document.getElementById('res-grid').innerHTML = results.length
+      ? results.map(mCard).join('')
+      : `<div class="empty" style="grid-column:1/-1"><i class="ti ti-mood-empty"></i><div class="empty-t">Sin resultados para "${q}"</div></div>`;
+  } catch (e) {
+    document.getElementById('res-grid').innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-t">Error de conexión. Comprueba el móvil.</div></div>`;
+  }
+}
+
+function clearS() {
+  document.getElementById('sinput').value = '';
+  document.getElementById('sclear').classList.remove('on');
+  document.getElementById('res-wrap').style.display = 'none';
+  document.getElementById('pop-wrap').style.display = 'block';
+  results = [];
+}
+
+// ── SELECT MOVIE → open sheet ──
+function selMovie(id) {
+  const pool = [...results, ...popular];
+  const m = pool.find(x => x.id === id);
+  if (!m) return;
+  if (queue.some(x => x.tmdbId === id)) { toast('Ya está en la cola', 'warn', '📋'); return; }
+  sel = m; epOn = false; sVal = 1; eVal = 1;
+  const title = m.title || m.name;
+  const year  = (m.release_date || m.first_air_date || '').slice(0, 4);
+  document.getElementById('sh-ttl').textContent = title;
+  document.getElementById('sh-yr').textContent  = year + ' · ' + (m.media_type === 'tv' ? 'Serie' : 'Película');
+  document.getElementById('sh-sc').textContent  = m.vote_average ? m.vote_average.toFixed(1) : '—';
+  const img = document.getElementById('sh-img');
+  img.src   = m.poster_path ? IMGS + m.poster_path : '';
+  img.style.display = m.poster_path ? 'block' : 'none';
+  document.getElementById('ep-section').style.display = m.media_type === 'tv' ? 'block' : 'none';
+  document.getElementById('ep-track').classList.remove('on');
+  document.getElementById('ep-fields').style.display = 'none';
+  document.getElementById('ep-label').textContent = 'Quiero un episodio específico';
+  document.getElementById('s-val').textContent = '1';
+  document.getElementById('e-val').textContent = '1';
+  document.getElementById('req-name').value = '';
+  document.getElementById('rsheet').classList.add('open');
+  document.getElementById('rsheet').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  setTimeout(() => document.getElementById('req-name').focus(), 200);
+}
+
+function closeSheet() {
+  document.getElementById('rsheet').classList.remove('open');
+  sel = null;
+}
+
+// ── EPISODE TOGGLE ──
+function toggleEp() {
+  epOn = !epOn;
+  document.getElementById('ep-track').classList.toggle('on', epOn);
+  document.getElementById('ep-fields').style.display = epOn ? 'block' : 'none';
+  document.getElementById('ep-label').textContent = epOn ? 'Episodio concreto activado' : 'Quiero un episodio específico';
+}
+
+function adj(type, d) {
+  if (type === 's') { sVal = Math.max(1, sVal + d); document.getElementById('s-val').textContent = sVal; }
+  else              { eVal = Math.max(1, eVal + d); document.getElementById('e-val').textContent = eVal; }
+}
+
+// ── ADD TO QUEUE ──
+function addToQueue() {
+  if (!sel) return;
+  const name = document.getElementById('req-name').value.trim();
+  if (!name) { toast('Pon tu nombre primero', 'warn', '👋'); document.getElementById('req-name').focus(); return; }
+  const title   = sel.title || sel.name;
+  const year    = (sel.release_date || sel.first_air_date || '').slice(0, 4);
+  const isTV    = sel.media_type === 'tv';
+  const episode = isTV && epOn ? `T${sVal} E${eVal}` : null;
+  queue.push({
+    tmdbId: sel.id, title, year,
+    type: isTV ? 'Serie' : 'Película',
+    poster: sel.poster_path ? IMGS + sel.poster_path : null,
+    requestedBy: name, episode, status: 'pending', note: '', addedAt: Date.now()
+  });
+  save(); closeSheet(); updNav();
+  const rg = document.getElementById('res-grid');
+  if (rg.children.length) rg.innerHTML = results.map(mCard).join('');
+  const pg = document.getElementById('pop-grid');
+  if (pg.children.length) pg.innerHTML = popular.map(mCard).join('');
+  toast('"' + title + '" añadida', 'ok', '🎬');
+}
+
+// ── RENDER QUEUE (user view) ──
+function renderQ() {
+  updNav();
+  const el = document.getElementById('qlist');
+  if (!queue.length) {
+    el.innerHTML = '<div class="empty"><i class="ti ti-popcorn"></i><div class="empty-t">La cola está vacía.<br>¡Busca algo!</div></div>';
+    return;
+  }
+  el.innerHTML = queue.slice().reverse().map((item, _, arr) => {
+    const ri = queue.findIndex(x => x.tmdbId === item.tmdbId && x.addedAt === item.addedAt);
+    return `<div class="qitem${item.status === 'available' ? ' avail' : ''}">
+      ${item.poster
+        ? `<img class="qposter" src="${item.poster}" alt="">`
+        : `<div class="qposter-ph"><i class="ti ti-movie" style="font-size:15px"></i></div>`}
+      <div class="qinfo">
+        <div class="qtitle">${item.title}</div>
+        <div class="qmeta">${item.year} · ${item.type} · <span class="who">${item.requestedBy}</span></div>
+        ${item.episode ? `<div class="qep"><i class="ti ti-tv" style="font-size:11px"></i> ${item.episode}</div>` : ''}
+      </div>
+      <div class="qright">
+        ${item.status === 'available'
+          ? `<div class="pill-ok"><i class="ti ti-check" style="font-size:10px"></i> Listo</div>`
+          : `<div class="pill-pend">En cola</div>`}
+        ${item.note
+          ? `<button class="note-btn has-note" onclick="this.classList.toggle('open')" aria-label="Ver nota del admin">
+               <i class="ti ti-bell-ringing" style="font-size:15px"></i>
+               <div class="note-bubble">${item.note}</div>
+             </button>`
+          : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── PIN ──
+function pk(k) {
+  if (pinV.length >= 4) return;
+  pinV += k;
+  for (let i = 0; i < 4; i++) document.getElementById('pd' + i).classList.toggle('on', i < pinV.length);
+  if (pinV.length === 4) setTimeout(checkPin, 120);
+}
+function pdel() {
+  if (!pinV.length) return;
+  pinV = pinV.slice(0, -1);
+  for (let i = 0; i < 4; i++) document.getElementById('pd' + i).classList.toggle('on', i < pinV.length);
+  document.getElementById('pin-err').textContent = '';
+}
+function checkPin() {
+  if (pinV === ADMIN_PIN) {
+    unlocked = true;
+    document.getElementById('pin-screen').style.display = 'none';
+    document.getElementById('adm-panel').style.display  = 'block';
+    renderAdm();
+  } else {
+    document.getElementById('pin-err').textContent = 'PIN incorrecto';
+    pinV = '';
+    for (let i = 0; i < 4; i++) document.getElementById('pd' + i).classList.remove('on');
+    setTimeout(() => document.getElementById('pin-err').textContent = '', 2000);
+  }
+}
+
+// ── ADMIN FILTER ──
+function setF(f, el) {
+  curF = f;
+  document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('act'));
+  el.classList.add('act');
+  renderAdm();
+}
+
+// ── RENDER ADMIN ──
+function renderAdm() {
+  document.getElementById('fn-all').textContent  = queue.length;
+  document.getElementById('fn-pend').textContent = queue.filter(x => x.status === 'pending').length;
+  document.getElementById('fn-avail').textContent = queue.filter(x => x.status === 'available').length;
+  const filtered = curF === 'all' ? queue : queue.filter(x => x.status === curF);
+  const el = document.getElementById('adm-list');
+  if (!filtered.length) {
+    el.innerHTML = '<div class="empty"><i class="ti ti-inbox"></i><div class="empty-t">Nada por aquí</div></div>';
+    return;
+  }
+  el.innerHTML = filtered.slice().reverse().map(item => {
+    const ri     = queue.findIndex(x => x.tmdbId === item.tmdbId && x.addedAt === item.addedAt);
+    const hasNote = !!item.note;
+    const isOpen  = noteOpen === ri;
+    return `<div class="adm-item${item.status === 'available' ? ' avail' : ''}">
+      ${item.poster
+        ? `<img class="qposter" src="${item.poster}" alt="">`
+        : `<div class="qposter-ph"><i class="ti ti-movie" style="font-size:15px"></i></div>`}
+      <div class="adm-mid">
+        <div class="qtitle">${item.title}</div>
+        <div class="qmeta">${item.year} · ${item.type} · <span class="who">${item.requestedBy}</span></div>
+        ${item.episode ? `<div class="qep"><i class="ti ti-tv" style="font-size:11px"></i> ${item.episode}</div>` : ''}
+        ${hasNote && !isOpen ? `<div style="font-size:11px;color:var(--gold);margin-top:4px;display:flex;align-items:center;gap:4px"><i class="ti ti-bell-ringing" style="font-size:12px"></i>${item.note}</div>` : ''}
+        <div class="note-editor${isOpen ? ' open' : ''}" id="ne-${ri}">
+          <textarea class="note-ta" id="nta-${ri}" placeholder="Nota para todos, ej: 'Disponible el viernes'..." rows="2">${item.note || ''}</textarea>
+          <div class="note-acts">
+            ${hasNote ? `<button class="btn-clr-note" onclick="clearNote(${ri})"><i class="ti ti-trash" style="font-size:12px"></i> Borrar</button>` : ''}
+            <button class="btn-save-note" onclick="saveNote(${ri})"><i class="ti ti-check" style="font-size:12px"></i> Guardar</button>
+          </div>
+        </div>
+      </div>
+      <div class="adm-actions">
+        ${item.status === 'available'
+          ? `<div class="pill-ok" style="font-size:10px"><i class="ti ti-check" style="font-size:10px"></i> Listo</div>`
+          : `<button class="btn-done" onclick="markDone(${ri})"><i class="ti ti-check" style="font-size:11px"></i> Listo</button>`}
+        <button class="btn-note${hasNote ? ' active' : ''}" onclick="toggleNote(${ri})">
+          <i class="ti ti-message" style="font-size:12px"></i>${hasNote ? ' Editar' : ' Nota'}
+        </button>
+        <button class="btn-del" onclick="delItem(${ri})" title="Eliminar">
+          <i class="ti ti-trash" style="font-size:13px"></i>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleNote(ri) {
+  noteOpen = noteOpen === ri ? null : ri;
+  renderAdm();
+  if (noteOpen === ri) setTimeout(() => { const ta = document.getElementById('nta-' + ri); if (ta) ta.focus(); }, 60);
+}
+function saveNote(ri) {
+  const ta = document.getElementById('nta-' + ri);
+  if (!ta) return;
+  queue[ri].note = ta.value.trim();
+  save(); noteOpen = null; renderAdm();
+  toast('Nota guardada', 'ok', '📌');
+}
+function clearNote(ri) {
+  queue[ri].note = '';
+  save(); noteOpen = null; renderAdm();
+  toast('Nota eliminada', '', '🗑');
+}
+function markDone(ri) {
+  queue[ri].status = 'available';
+  save(); updNav(); renderAdm();
+  toast('"' + queue[ri].title + '" marcada como lista', 'ok', '✓');
+}
+function delItem(ri) {
+  const t = queue[ri].title;
+  queue.splice(ri, 1);
+  save(); updNav(); renderAdm();
+  toast('"' + t + '" eliminada', '', '🗑');
+}
+
+// ── SEARCH INPUT ──
+document.getElementById('sinput').addEventListener('input', e => {
+  const v = e.target.value.trim();
+  document.getElementById('sclear').classList.toggle('on', !!v);
+  clearTimeout(sTimer);
+  if (!v) { clearS(); return; }
+  sTimer = setTimeout(() => doSearch(v), 420);
+});
+
+// ── PWA INSTALL ──
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('install-banner').classList.add('visible');
+});
+document.getElementById('btn-install').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('install-banner').classList.remove('visible');
+});
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install-banner').classList.remove('visible');
+  toast('¡App instalada!', 'ok', '🎉');
+});
+
+// ── INIT ──
+updNav();
+loadPop();
+</script>
+</body>
+</html>
