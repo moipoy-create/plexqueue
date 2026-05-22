@@ -1122,6 +1122,50 @@ function selName(name) {
 }
 
 // ── ADD TO QUEUE ──
+
+// ── FETCH RELEASE DATES FROM TMDB ──
+async function fetchReleaseDates(tmdbId, isTV) {
+  try {
+    if (isTV) {
+      // For TV series get first air date
+      const d = await tmdbGet(`/tv/${tmdbId}?language=es-ES`);
+      if (d.first_air_date) {
+        const date = new Date(d.first_air_date);
+        const formatted = date.toLocaleDateString('es-ES', {day:'numeric', month:'long', year:'numeric'});
+        return `📺 Primer episodio: ${formatted}`;
+      }
+      return null;
+    } else {
+      // For movies get release dates by country
+      const d = await tmdbGet(`/movie/${tmdbId}/release_dates`);
+      const results = d.results || [];
+      // Try ES first, then US
+      const countries = ['ES', 'US'];
+      let theatrical = null, digital = null, physical = null;
+      for (const country of countries) {
+        const entry = results.find(r => r.iso_3166_1 === country);
+        if (!entry) continue;
+        for (const rel of entry.release_dates) {
+          const date = rel.release_date ? new Date(rel.release_date) : null;
+          if (!date) continue;
+          const formatted = date.toLocaleDateString('es-ES', {day:'numeric', month:'long', year:'numeric'});
+          if (rel.type === 3 && !theatrical) theatrical = formatted; // theatrical
+          if (rel.type === 4 && !digital) digital = formatted;      // digital
+          if (rel.type === 5 && !physical) physical = formatted;    // physical/bluray
+        }
+        if (theatrical || digital || physical) break;
+      }
+      const lines = [];
+      if (theatrical) lines.push(`🎬 Estreno en cines: ${theatrical}`);
+      if (digital) lines.push(`💻 Disponible en digital: ${digital}`);
+      if (physical) lines.push(`📀 Blu-ray / físico: ${physical}`);
+      return lines.length ? lines.join('\n') : null;
+    }
+  } catch(e) {
+    return null;
+  }
+}
+
 async function addToQueue() {
   if (!sel) return;
   const name = document.getElementById('req-name').value.trim();
@@ -1130,11 +1174,15 @@ async function addToQueue() {
   const year    = (sel.release_date || sel.first_air_date || '').slice(0, 4);
   const isTV    = sel.media_type === 'tv';
   const episode = isTV && epOn ? `T${sVal} E${eVal}` : null;
+  // Fetch release dates automatically
+  const releaseDates = await fetchReleaseDates(sel.id, isTV);
+  const autoNote = releaseDates || '';
+
   queue.push({
     tmdbId: sel.id, title, year,
     type: isTV ? 'Serie' : 'Película',
     poster: sel.poster_path ? IMGS + sel.poster_path : null,
-    requestedBy: name, episode, status: 'pending', note: '', addedAt: Date.now()
+    requestedBy: name, episode, status: 'pending', note: autoNote, addedAt: Date.now()
   });
   await save(); closeSheet(); updNav();
   const rg = document.getElementById('res-grid');
