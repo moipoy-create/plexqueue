@@ -745,7 +745,9 @@ let deferredPrompt = null;
 
 
 // ── MOVIE DETAIL MODAL ──
-async function openDetail(item) {
+async function openDetail(idx) {
+  const item = queue[idx];
+  if (!item) return;
   const modal = document.getElementById('detail-modal');
   
   // Backdrop (wide image)
@@ -981,9 +983,9 @@ function renderQ() {
     el.innerHTML = '<div class="empty"><i class="ti ti-popcorn"></i><div class="empty-t">La cola está vacía.<br>¡Busca algo!</div></div>';
     return;
   }
-  el.innerHTML = queue.slice().reverse().map((item, _, arr) => {
-    const ri = queue.findIndex(x => x.tmdbId === item.tmdbId && x.addedAt === item.addedAt);
-    return `<div class="qitem${item.status === 'available' ? ' avail' : ''}">
+  el.innerHTML = queue.slice().reverse().map((item) => {
+    const idx = queue.findIndex(x => x.tmdbId === item.tmdbId && x.addedAt === item.addedAt);
+    return `<div class="qitem${item.status === 'available' ? ' avail' : ''}" onclick="openDetail(${idx})" style="cursor:pointer">
       ${item.poster
         ? `<img class="qposter" src="${item.poster}" alt="">`
         : `<div class="qposter-ph"><i class="ti ti-movie" style="font-size:15px"></i></div>`}
