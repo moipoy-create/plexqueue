@@ -1262,14 +1262,14 @@ function toggleNote(ri) {
   renderAdm();
   if (noteOpen === ri) setTimeout(() => { const ta = document.getElementById('nta-' + ri); if (ta) ta.focus(); }, 60);
 }
-function saveNote(ri) {
+async function saveNote(ri) {
   const ta = document.getElementById('nta-' + ri);
   if (!ta) return;
   queue[ri].note = ta.value.trim();
   await save(); noteOpen = null; renderAdm();
   toast('Nota guardada', 'ok', '📌');
 }
-function clearNote(ri) {
+async function clearNote(ri) {
   queue[ri].note = '';
   await save(); noteOpen = null; renderAdm();
   toast('Nota eliminada', '', '🗑');
