@@ -236,6 +236,7 @@ body{
 .qmeta{font-size:11px;color:var(--t3);margin-bottom:2px}
 .qmeta .who{color:var(--accent);font-weight:500}
 .qep{font-size:11px;color:var(--blue);font-weight:500;display:flex;align-items:center;gap:3px}
+.qdate{font-size:10px;color:var(--gold);margin-top:3px;line-height:1.5;opacity:.9}
 .qright{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
 .pill-pend{background:#7c3aed22;color:var(--accent);font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap}
 .pill-ok{
@@ -1182,7 +1183,7 @@ async function addToQueue() {
     tmdbId: sel.id, title, year,
     type: isTV ? 'Serie' : 'Película',
     poster: sel.poster_path ? IMGS + sel.poster_path : null,
-    requestedBy: name, episode, status: 'pending', note: autoNote, addedAt: Date.now()
+    requestedBy: name, episode, status: 'pending', note: autoNote, adminNote: '', addedAt: Date.now()
   });
   await save(); closeSheet(); updNav();
   const rg = document.getElementById('res-grid');
@@ -1210,15 +1211,16 @@ function renderQ() {
         <div class="qtitle">${item.title}</div>
         <div class="qmeta">${item.year} · ${item.type} · <span class="who">${item.requestedBy}</span></div>
         ${item.episode ? `<div class="qep"><i class="ti ti-tv" style="font-size:11px"></i> ${item.episode}</div>` : ''}
+        ${item.note ? `<div class="qdate">${item.note.replace(/\n/g,'<br>')}</div>` : ''}
       </div>
       <div class="qright">
         ${item.status === 'available'
           ? `<div class="pill-ok"><i class="ti ti-check" style="font-size:10px"></i> Listo</div>`
           : `<div class="pill-pend">En cola</div>`}
-        ${item.note
+        ${(item.adminNote||'')
           ? `<button class="note-btn has-note" onclick="event.stopPropagation();this.classList.toggle('open')" aria-label="Ver nota del admin">
                <i class="ti ti-bell-ringing" style="font-size:15px"></i>
-               <div class="note-bubble">${item.note}</div>
+               <div class="note-bubble">${item.adminNote}</div>
              </button>`
           : ''}
       </div>
@@ -1274,7 +1276,7 @@ function renderAdm() {
   }
   el.innerHTML = filtered.slice().reverse().map(item => {
     const ri     = queue.findIndex(x => x.tmdbId === item.tmdbId && x.addedAt === item.addedAt);
-    const hasNote = !!item.note;
+    const hasNote = !!(item.adminNote||'');
     const isOpen  = noteOpen === ri;
     return `<div class="adm-item${item.status === 'available' ? ' avail' : ''}">
       ${item.poster
@@ -1284,9 +1286,9 @@ function renderAdm() {
         <div class="qtitle">${item.title}</div>
         <div class="qmeta">${item.year} · ${item.type} · <span class="who">${item.requestedBy}</span></div>
         ${item.episode ? `<div class="qep"><i class="ti ti-tv" style="font-size:11px"></i> ${item.episode}</div>` : ''}
-        ${hasNote && !isOpen ? `<div style="font-size:11px;color:var(--gold);margin-top:4px;display:flex;align-items:center;gap:4px"><i class="ti ti-bell-ringing" style="font-size:12px"></i>${item.note}</div>` : ''}
+        ${hasNote && !isOpen ? `<div style="font-size:11px;color:var(--gold);margin-top:4px;display:flex;align-items:center;gap:4px"><i class="ti ti-bell-ringing" style="font-size:12px"></i>${item.adminNote}</div>` : ''}
         <div class="note-editor${isOpen ? ' open' : ''}" id="ne-${ri}">
-          <textarea class="note-ta" id="nta-${ri}" placeholder="Nota para todos, ej: 'Disponible el viernes'..." rows="2">${item.note || ''}</textarea>
+          <textarea class="note-ta" id="nta-${ri}" placeholder="Nota para todos, ej: 'Disponible el viernes'..." rows="2">${item.adminNote || ''}</textarea>
           <div class="note-acts">
             ${hasNote ? `<button class="btn-clr-note" onclick="clearNote(${ri})"><i class="ti ti-trash" style="font-size:12px"></i> Borrar</button>` : ''}
             <button class="btn-save-note" onclick="saveNote(${ri})"><i class="ti ti-check" style="font-size:12px"></i> Guardar</button>
@@ -1316,12 +1318,12 @@ function toggleNote(ri) {
 async function saveNote(ri) {
   const ta = document.getElementById('nta-' + ri);
   if (!ta) return;
-  queue[ri].note = ta.value.trim();
+  queue[ri].adminNote = ta.value.trim();
   await save(); noteOpen = null; renderAdm();
   toast('Nota guardada', 'ok', '📌');
 }
 async function clearNote(ri) {
-  queue[ri].note = '';
+  queue[ri].adminNote = '';
   await save(); noteOpen = null; renderAdm();
   toast('Nota eliminada', '', '🗑');
 }
