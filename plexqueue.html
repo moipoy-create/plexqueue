@@ -841,6 +841,25 @@ function closeModal(e) {
 // ── RECENT FROM FIREBASE ──
 let recentData = [];
 
+async function fetchTMDBForRecent(item) {
+  const isEp = item.type === 'episode';
+  const searchTitle = isEp ? item.parent_title : item.title;
+  const mediaType = isEp ? 'tv' : 'movie';
+  try {
+    const d = await tmdbGet(`/search/${mediaType}?query=${encodeURIComponent(searchTitle)}&language=es-ES&year=${item.year||''}`);
+    const result = (d.results || [])[0];
+    if (result) {
+      item._poster = result.poster_path ? IMGS + result.poster_path : null;
+      item._overview = result.overview || item.summary || '';
+      item._tmdbId = result.id;
+    }
+  } catch(e) {
+    item._poster = null;
+    item._overview = item.summary || '';
+  }
+  return item;
+}
+
 async function loadRecent() {
   const el = document.getElementById('recent-list');
   const pill = document.getElementById('recent-pill');
@@ -852,32 +871,43 @@ async function loadRecent() {
       pill.textContent = '0 títulos';
       return;
     }
-    // Convert object to array and sort by addedAt desc
-    recentData = Object.values(d).sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0)).slice(0, 30);
+    recentData = Object.values(d).sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0)).slice(0, 20);
     pill.textContent = recentData.length + ' título' + (recentData.length === 1 ? '' : 's');
-    el.innerHTML = recentData.map((item, idx) => {
-      const isEp = item.type === 'episode';
-      const displayTitle = isEp ? item.parent_title : item.title;
-      const epLabel = isEp ? `T${item.season} E${item.episode} · ${item.title}` : null;
-      const meta = [item.year, item.genres ? item.genres.split(',')[0].trim() : null, item.rating ? '⭐ ' + item.rating : null].filter(Boolean).join(' · ');
-      return `<div class="rec-item" onclick="openRecent(${idx})">
-        ${item.thumb
-          ? `<img class="rec-poster" src="${item.thumb}" alt="" onerror="this.style.display='none'">`
-          : `<div class="rec-poster-ph"><i class="ti ti-movie" style="font-size:15px"></i></div>`}
-        <div class="rec-info">
-          <div class="rec-title">${displayTitle}</div>
-          <div class="rec-meta">${meta}</div>
-          ${epLabel ? `<div class="rec-ep"><i class="ti ti-tv" style="font-size:11px"></i> ${epLabel}</div>` : ''}
-        </div>
-        <div class="rec-badge">
-          <span class="${isEp ? 'pill-episode' : 'pill-movie'}">${isEp ? 'Serie' : 'Película'}</span>
-        </div>
-      </div>`;
-    }).join('');
+    // Show list immediately without posters
+    renderRecentList();
+    // Then fetch TMDB data for each item and update
+    for (let i = 0; i < recentData.length; i++) {
+      await fetchTMDBForRecent(recentData[i]);
+      renderRecentList();
+    }
   } catch(e) {
     el.innerHTML = '<div class="empty"><i class="ti ti-wifi-off"></i><div class="empty-t">Error conectando con Firebase</div></div>';
     pill.textContent = 'error';
   }
+}
+
+function renderRecentList() {
+  const el = document.getElementById('recent-list');
+  el.innerHTML = recentData.map((item, idx) => {
+    const isEp = item.type === 'episode';
+    const displayTitle = isEp ? item.parent_title : item.title;
+    const epLabel = isEp ? `T${item.season} E${item.episode} · ${item.title}` : null;
+    const meta = [item.year, item.genres ? item.genres.split(',')[0].trim() : null, item.rating ? '⭐ ' + item.rating : null].filter(Boolean).join(' · ');
+    const poster = item._poster || null;
+    return `<div class="rec-item" onclick="openRecent(${idx})">
+      ${poster
+        ? `<img class="rec-poster" src="${poster}" alt="">`
+        : `<div class="rec-poster-ph"><i class="ti ti-movie" style="font-size:15px"></i></div>`}
+      <div class="rec-info">
+        <div class="rec-title">${displayTitle}</div>
+        <div class="rec-meta">${meta}</div>
+        ${epLabel ? `<div class="rec-ep"><i class="ti ti-tv" style="font-size:11px"></i> ${epLabel}</div>` : ''}
+      </div>
+      <div class="rec-badge">
+        <span class="${isEp ? 'pill-episode' : 'pill-movie'}">${isEp ? 'Serie' : 'Película'}</span>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function openRecent(idx) {
