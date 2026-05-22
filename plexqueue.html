@@ -427,6 +427,66 @@ body{
 }
 .name-btn:hover{border-color:var(--border3);color:var(--t1)}
 .name-btn.selected{background:var(--accent2);border-color:var(--accent2);color:#fff;font-weight:600}
+
+/* ── MOVIE DETAIL MODAL ── */
+.modal-overlay{
+  position:fixed;inset:0;background:#000000cc;z-index:200;
+  display:flex;align-items:flex-end;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .25s;
+}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal-sheet{
+  background:var(--s1);border-radius:var(--r20) var(--r20) 0 0;
+  width:100%;max-width:430px;max-height:88vh;overflow-y:auto;
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.32,0,.67,0);
+  padding-bottom:calc(24px + var(--safe-bottom));
+}
+.modal-overlay.open .modal-sheet{transform:translateY(0);transition-timing-function:cubic-bezier(.33,1,.68,1)}
+.modal-backdrop{
+  width:100%;height:200px;object-fit:cover;display:block;
+  border-radius:var(--r20) var(--r20) 0 0;background:var(--s3);
+}
+.modal-backdrop-ph{
+  width:100%;height:160px;background:var(--s3);
+  border-radius:var(--r20) var(--r20) 0 0;
+  display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:40px;
+}
+.modal-body{padding:0 20px}
+.modal-top{display:flex;gap:14px;margin-top:-40px;margin-bottom:14px;align-items:flex-end}
+.modal-poster{
+  width:80px;height:120px;object-fit:cover;border-radius:12px;
+  border:3px solid var(--s1);flex-shrink:0;background:var(--s3);
+}
+.modal-poster-ph{
+  width:80px;height:120px;background:var(--s3);border-radius:12px;
+  border:3px solid var(--s1);display:flex;align-items:center;
+  justify-content:center;color:var(--t3);font-size:24px;flex-shrink:0;
+}
+.modal-meta{flex:1;padding-bottom:4px}
+.modal-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;line-height:1.2;margin-bottom:4px}
+.modal-year{font-size:12px;color:var(--t3);margin-bottom:6px}
+.modal-tags{display:flex;gap:6px;flex-wrap:wrap}
+.modal-tag{background:var(--s3);border:1px solid var(--border);font-size:11px;color:var(--t2);padding:3px 9px;border-radius:20px}
+.modal-tag.green{background:#34d39920;border-color:#34d39940;color:var(--green)}
+.modal-tag.purple{background:#7c3aed22;border-color:#7c3aed44;color:var(--accent)}
+.modal-tag.blue{background:#60a5fa20;border-color:#60a5fa40;color:var(--blue)}
+.modal-section{margin-bottom:16px}
+.modal-section-title{font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.modal-overview{font-size:13px;color:var(--t2);line-height:1.6}
+.modal-close{
+  position:absolute;top:14px;right:14px;width:32px;height:32px;
+  background:#00000066;border:none;border-radius:50%;
+  color:#fff;font-size:16px;cursor:pointer;display:flex;
+  align-items:center;justify-content:center;
+}
+.modal-inner{position:relative}
+.modal-note{
+  background:var(--s3);border:1px solid var(--border2);
+  border-radius:var(--r12);padding:12px 14px;
+  display:flex;align-items:flex-start;gap:10px;margin-bottom:16px;
+}
+.modal-note i{color:var(--gold);font-size:16px;flex-shrink:0;margin-top:1px}
+.modal-note-text{font-size:13px;color:var(--t2);line-height:1.5}
 </style>
 </head>
 <body>
@@ -627,6 +687,31 @@ body{
 
     </div>
   </div>
+
+<!-- MOVIE DETAIL MODAL -->
+<div class="modal-overlay" id="detail-modal" onclick="closeModal(event)">
+  <div class="modal-sheet">
+    <div class="modal-inner">
+      <button class="modal-close" onclick="closeDetailModal()"><i class="ti ti-x" style="font-size:14px"></i></button>
+      <div id="modal-backdrop-wrap"></div>
+      <div class="modal-body">
+        <div class="modal-top">
+          <div id="modal-poster-wrap"></div>
+          <div class="modal-meta">
+            <div class="modal-title" id="modal-title"></div>
+            <div class="modal-year" id="modal-year"></div>
+            <div class="modal-tags" id="modal-tags"></div>
+          </div>
+        </div>
+        <div id="modal-note-wrap"></div>
+        <div class="modal-section">
+          <div class="modal-section-title">Sinopsis</div>
+          <div class="modal-overview" id="modal-overview"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 </div>
 
 <!-- Toast -->
@@ -657,6 +742,66 @@ let sVal     = 1;
 let eVal     = 1;
 let noteOpen = null;
 let deferredPrompt = null;
+
+
+// ── MOVIE DETAIL MODAL ──
+async function openDetail(item) {
+  const modal = document.getElementById('detail-modal');
+  
+  // Backdrop (wide image)
+  const bwrap = document.getElementById('modal-backdrop-wrap');
+  if (item.poster) {
+    const backdropSrc = item.poster.replace('/w185/', '/w780/');
+    bwrap.innerHTML = `<img class="modal-backdrop" src="${backdropSrc}" alt="" onerror="this.parentNode.innerHTML='<div class=modal-backdrop-ph><i class=ti style=font-size:40px>🎬</i></div>'">`;
+  } else {
+    bwrap.innerHTML = '<div class="modal-backdrop-ph"><i class="ti ti-movie" style="font-size:40px"></i></div>';
+  }
+  
+  // Poster
+  const pwrap = document.getElementById('modal-poster-wrap');
+  if (item.poster) {
+    pwrap.innerHTML = `<img class="modal-poster" src="${item.poster}" alt="">`;
+  } else {
+    pwrap.innerHTML = '<div class="modal-poster-ph"><i class="ti ti-movie" style="font-size:24px"></i></div>';
+  }
+  
+  document.getElementById('modal-title').textContent = item.title;
+  document.getElementById('modal-year').textContent = item.year;
+  
+  // Tags
+  const tags = document.getElementById('modal-tags');
+  let tagsHtml = `<span class="modal-tag">${item.type}</span>`;
+  tagsHtml += `<span class="modal-tag purple">Pedida por ${item.requestedBy}</span>`;
+  if (item.episode) tagsHtml += `<span class="modal-tag blue"><i class="ti ti-tv" style="font-size:10px"></i> ${item.episode}</span>`;
+  tagsHtml += `<span class="modal-tag${item.status==='available'?' green':''}">${item.status==='available'?'✓ Disponible':'En cola'}</span>`;
+  tags.innerHTML = tagsHtml;
+  
+  // Note
+  const noteWrap = document.getElementById('modal-note-wrap');
+  noteWrap.innerHTML = item.note
+    ? `<div class="modal-note"><i class="ti ti-bell-ringing"></i><div class="modal-note-text">${item.note}</div></div>`
+    : '';
+  
+  // Overview from TMDB
+  const overviewEl = document.getElementById('modal-overview');
+  overviewEl.textContent = 'Cargando sinopsis...';
+  modal.classList.add('open');
+  
+  try {
+    const type = item.type === 'Serie' ? 'tv' : 'movie';
+    const d = await tmdbGet(`/${type}/${item.tmdbId}?language=es-ES`);
+    overviewEl.textContent = d.overview || 'Sin sinopsis disponible.';
+  } catch(e) {
+    overviewEl.textContent = 'No se pudo cargar la sinopsis.';
+  }
+}
+
+function closeDetailModal() {
+  document.getElementById('detail-modal').classList.remove('open');
+}
+function closeModal(e) {
+  if (e.target === document.getElementById('detail-modal')) closeDetailModal();
+}
 
 const save = () => localStorage.setItem('pq_v3', JSON.stringify(queue));
 
@@ -852,7 +997,7 @@ function renderQ() {
           ? `<div class="pill-ok"><i class="ti ti-check" style="font-size:10px"></i> Listo</div>`
           : `<div class="pill-pend">En cola</div>`}
         ${item.note
-          ? `<button class="note-btn has-note" onclick="this.classList.toggle('open')" aria-label="Ver nota del admin">
+          ? `<button class="note-btn has-note" onclick="event.stopPropagation();this.classList.toggle('open')" aria-label="Ver nota del admin">
                <i class="ti ti-bell-ringing" style="font-size:15px"></i>
                <div class="note-bubble">${item.note}</div>
              </button>`
