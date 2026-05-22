@@ -549,9 +549,7 @@ body{
     <div class="nav-tab" onclick="tab('recent')" id="tab-recent">
       <i class="ti ti-sparkles"></i><span>Subidas</span>
     </div>
-    <div class="nav-tab" onclick="tab('admin')" id="tab-admin">
-      <i class="ti ti-shield"></i><span>Admin</span>
-    </div>
+
   </div>
 
   <!-- MAIN -->
@@ -612,6 +610,7 @@ body{
         <div class="field">
           <div class="flabel">¿Quién eres?</div>
           <div style="display:flex;flex-direction:column;gap:8px" id="name-btns">
+            <button type="button" class="name-btn" onclick="selName('Moi')">Moi</button>
             <button type="button" class="name-btn" onclick="selName('Javi')">Javi</button>
             <button type="button" class="name-btn" onclick="selName('Arma')">Arma</button>
           </div>
