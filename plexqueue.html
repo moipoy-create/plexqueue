@@ -761,7 +761,7 @@ const FIREBASE = 'https://plex-4bc9d-default-rtdb.europe-west1.firebasedatabase.
 const IMG  = 'https://image.tmdb.org/t/p/w300';
 const IMGS = 'https://image.tmdb.org/t/p/w185';
 
-let queue    = JSON.parse(localStorage.getItem('pq_v3') || '[]');
+let queue    = [];
 let results  = [];
 let popular  = [];
 let sel      = null;
@@ -940,7 +940,37 @@ function openRecent(idx) {
   modal.classList.add('open');
 }
 
-const save = () => localStorage.setItem('pq_v3', JSON.stringify(queue));
+async function save() {
+  try {
+    // Rebuild as object with tmdbId+addedAt as key
+    const obj = {};
+    queue.forEach(item => {
+      obj[item.tmdbId + '_' + item.addedAt] = item;
+    });
+    await fetch(`${FIREBASE}/queue.json`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(obj)
+    });
+  } catch(e) {
+    console.error('Error saving queue:', e);
+  }
+}
+
+async function loadQueue() {
+  try {
+    const r = await fetch(`${FIREBASE}/queue.json`);
+    const d = await r.json();
+    if (d) {
+      queue = Object.values(d).sort((a,b) => (a.addedAt||0) - (b.addedAt||0));
+    } else {
+      queue = [];
+    }
+  } catch(e) {
+    queue = [];
+  }
+  updNav();
+}
 
 // ── TOAST ──
 function toast(msg, type, ico) {
@@ -959,9 +989,9 @@ function tab(t) {
   document.getElementById('view-' + t).classList.add('active');
   const tb = document.getElementById('tab-' + t);
   if (tb) tb.classList.add('active');
-  if (t === 'queue') renderQ();
+  if (t === 'queue') { loadQueue().then(renderQ); }
   if (t === 'recent') loadRecent();
-  if (t === 'admin' && unlocked) renderAdm();
+  if (t === 'admin' && unlocked) { loadQueue().then(renderAdm); }
 }
 
 function updNav() {
@@ -1089,7 +1119,7 @@ function selName(name) {
 }
 
 // ── ADD TO QUEUE ──
-function addToQueue() {
+async function addToQueue() {
   if (!sel) return;
   const name = document.getElementById('req-name').value.trim();
   if (!name) { toast('Pon tu nombre primero', 'warn', '👋'); document.getElementById('req-name').focus(); return; }
@@ -1103,7 +1133,7 @@ function addToQueue() {
     poster: sel.poster_path ? IMGS + sel.poster_path : null,
     requestedBy: name, episode, status: 'pending', note: '', addedAt: Date.now()
   });
-  save(); closeSheet(); updNav();
+  await save(); closeSheet(); updNav();
   const rg = document.getElementById('res-grid');
   if (rg.children.length) rg.innerHTML = results.map(mCard).join('');
   const pg = document.getElementById('pop-grid');
@@ -1236,23 +1266,23 @@ function saveNote(ri) {
   const ta = document.getElementById('nta-' + ri);
   if (!ta) return;
   queue[ri].note = ta.value.trim();
-  save(); noteOpen = null; renderAdm();
+  await save(); noteOpen = null; renderAdm();
   toast('Nota guardada', 'ok', '📌');
 }
 function clearNote(ri) {
   queue[ri].note = '';
-  save(); noteOpen = null; renderAdm();
+  await save(); noteOpen = null; renderAdm();
   toast('Nota eliminada', '', '🗑');
 }
-function markDone(ri) {
+async function markDone(ri) {
   queue[ri].status = 'available';
-  save(); updNav(); renderAdm();
+  await save(); updNav(); renderAdm();
   toast('"' + queue[ri].title + '" marcada como lista', 'ok', '✓');
 }
-function delItem(ri) {
+async function delItem(ri) {
   const t = queue[ri].title;
   queue.splice(ri, 1);
-  save(); updNav(); renderAdm();
+  await save(); updNav(); renderAdm();
   toast('"' + t + '" eliminada', '', '🗑');
 }
 
@@ -1284,8 +1314,7 @@ window.addEventListener('appinstalled', () => {
 });
 
 // ── INIT ──
-updNav();
-loadPop();
+loadQueue().then(() => { loadPop(); });
 </script>
 </body>
 </html>
