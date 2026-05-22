@@ -917,12 +917,15 @@ function openRecent(idx) {
   const isEp = item.type === 'episode';
   const displayTitle = isEp ? item.parent_title : item.title;
 
-  document.getElementById('modal-backdrop-wrap').innerHTML = item.thumb
-    ? `<img class="modal-backdrop" src="${item.thumb}" alt="">`
+  const poster = item._poster || null;
+  const backdrop = poster ? poster.replace('/w185/', '/w780/') : null;
+
+  document.getElementById('modal-backdrop-wrap').innerHTML = backdrop
+    ? `<img class="modal-backdrop" src="${backdrop}" alt="">`
     : '<div class="modal-backdrop-ph"><i class="ti ti-movie" style="font-size:40px"></i></div>';
 
-  document.getElementById('modal-poster-wrap').innerHTML = item.thumb
-    ? `<img class="modal-poster" src="${item.thumb}" alt="">`
+  document.getElementById('modal-poster-wrap').innerHTML = poster
+    ? `<img class="modal-poster" src="${poster}" alt="">`
     : '<div class="modal-poster-ph"><i class="ti ti-movie" style="font-size:24px"></i></div>';
 
   document.getElementById('modal-title').textContent = displayTitle;
