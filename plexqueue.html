@@ -487,6 +487,25 @@ body{
 }
 .modal-note i{color:var(--gold);font-size:16px;flex-shrink:0;margin-top:1px}
 .modal-note-text{font-size:13px;color:var(--t2);line-height:1.5}
+
+/* ── RECENT ITEMS ── */
+.rec-item{
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:var(--r16);padding:11px 13px;
+  display:flex;align-items:center;gap:11px;
+  margin-bottom:8px;cursor:pointer;transition:all .2s;
+}
+.rec-item:hover{border-color:var(--border3)}
+.rec-item:active{transform:scale(.98)}
+.rec-poster{width:40px;height:60px;object-fit:cover;border-radius:7px;flex-shrink:0;background:var(--s3)}
+.rec-poster-ph{width:40px;height:60px;background:var(--s3);border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--t3);flex-shrink:0}
+.rec-info{flex:1;min-width:0}
+.rec-title{font-size:13px;font-weight:600;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.rec-meta{font-size:11px;color:var(--t3);margin-bottom:2px}
+.rec-ep{font-size:11px;color:var(--blue);font-weight:500}
+.rec-badge{flex-shrink:0}
+.pill-movie{background:#7c3aed22;color:var(--accent);font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px}
+.pill-episode{background:#60a5fa20;color:var(--blue);font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px}
 </style>
 </head>
 <body>
@@ -524,6 +543,9 @@ body{
     <div class="nav-tab" onclick="tab('queue')" id="tab-queue">
       <i class="ti ti-list"></i><span>Cola</span>
       <span class="ntc" id="nav-c">0</span>
+    </div>
+    <div class="nav-tab" onclick="tab('recent')" id="tab-recent">
+      <i class="ti ti-sparkles"></i><span>Subidas</span>
     </div>
     <div class="nav-tab" onclick="tab('admin')" id="tab-admin">
       <i class="ti ti-shield"></i><span>Admin</span>
@@ -639,6 +661,15 @@ body{
       <div id="qlist"></div>
     </div>
 
+    <!-- ═══ RECENT VIEW ═══ -->
+    <div class="view" id="view-recent">
+      <div class="sec-hdr" style="margin-bottom:14px">
+        <span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--t1)">Últimas subidas</span>
+        <span style="font-size:11px;color:var(--t3);background:var(--s3);border:1px solid var(--border);padding:3px 10px;border-radius:20px" id="recent-pill">cargando...</span>
+      </div>
+      <div id="recent-list"><div class="ldrow"><span class="spin"></span>Cargando...</div></div>
+    </div>
+
     <!-- ═══ ADMIN VIEW ═══ -->
     <div class="view" id="view-admin">
 
@@ -726,6 +757,7 @@ const TMDB_KEY  = 'd74e2dd1ee6ec34159cbc3ebc426f6f0';
 // ─────────────
 
 const API  = 'https://api.themoviedb.org/3';
+const FIREBASE = 'https://plex-4bc9d-default-rtdb.europe-west1.firebasedatabase.app';
 const IMG  = 'https://image.tmdb.org/t/p/w300';
 const IMGS = 'https://image.tmdb.org/t/p/w185';
 
@@ -805,6 +837,79 @@ function closeModal(e) {
   if (e.target === document.getElementById('detail-modal')) closeDetailModal();
 }
 
+
+// ── RECENT FROM FIREBASE ──
+let recentData = [];
+
+async function loadRecent() {
+  const el = document.getElementById('recent-list');
+  const pill = document.getElementById('recent-pill');
+  try {
+    const r = await fetch(`${FIREBASE}/recent.json`);
+    const d = await r.json();
+    if (!d) {
+      el.innerHTML = '<div class="empty"><i class="ti ti-clock"></i><div class="empty-t">Aún no hay subidas registradas</div></div>';
+      pill.textContent = '0 títulos';
+      return;
+    }
+    // Convert object to array and sort by addedAt desc
+    recentData = Object.values(d).sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0)).slice(0, 30);
+    pill.textContent = recentData.length + ' título' + (recentData.length === 1 ? '' : 's');
+    el.innerHTML = recentData.map((item, idx) => {
+      const isEp = item.type === 'episode';
+      const displayTitle = isEp ? item.parent_title : item.title;
+      const epLabel = isEp ? `T${item.season} E${item.episode} · ${item.title}` : null;
+      const meta = [item.year, item.genres ? item.genres.split(',')[0].trim() : null, item.rating ? '⭐ ' + item.rating : null].filter(Boolean).join(' · ');
+      return `<div class="rec-item" onclick="openRecent(${idx})">
+        ${item.thumb
+          ? `<img class="rec-poster" src="${item.thumb}" alt="" onerror="this.style.display='none'">`
+          : `<div class="rec-poster-ph"><i class="ti ti-movie" style="font-size:15px"></i></div>`}
+        <div class="rec-info">
+          <div class="rec-title">${displayTitle}</div>
+          <div class="rec-meta">${meta}</div>
+          ${epLabel ? `<div class="rec-ep"><i class="ti ti-tv" style="font-size:11px"></i> ${epLabel}</div>` : ''}
+        </div>
+        <div class="rec-badge">
+          <span class="${isEp ? 'pill-episode' : 'pill-movie'}">${isEp ? 'Serie' : 'Película'}</span>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div class="empty"><i class="ti ti-wifi-off"></i><div class="empty-t">Error conectando con Firebase</div></div>';
+    pill.textContent = 'error';
+  }
+}
+
+function openRecent(idx) {
+  const item = recentData[idx];
+  if (!item) return;
+  const modal = document.getElementById('detail-modal');
+  const isEp = item.type === 'episode';
+  const displayTitle = isEp ? item.parent_title : item.title;
+
+  document.getElementById('modal-backdrop-wrap').innerHTML = item.thumb
+    ? `<img class="modal-backdrop" src="${item.thumb}" alt="">`
+    : '<div class="modal-backdrop-ph"><i class="ti ti-movie" style="font-size:40px"></i></div>';
+
+  document.getElementById('modal-poster-wrap').innerHTML = item.thumb
+    ? `<img class="modal-poster" src="${item.thumb}" alt="">`
+    : '<div class="modal-poster-ph"><i class="ti ti-movie" style="font-size:24px"></i></div>';
+
+  document.getElementById('modal-title').textContent = displayTitle;
+  document.getElementById('modal-year').textContent = item.year || '';
+
+  let tagsHtml = `<span class="modal-tag">${isEp ? 'Serie' : 'Película'}</span>`;
+  if (item.rating) tagsHtml += `<span class="modal-tag" style="color:var(--gold)">⭐ ${item.rating}</span>`;
+  if (item.genres) item.genres.split(',').slice(0,3).forEach(g => {
+    tagsHtml += `<span class="modal-tag">${g.trim()}</span>`;
+  });
+  if (isEp) tagsHtml += `<span class="modal-tag blue">T${item.season} E${item.episode}</span>`;
+  document.getElementById('modal-tags').innerHTML = tagsHtml;
+  document.getElementById('modal-note-wrap').innerHTML = '';
+  document.getElementById('modal-overview').textContent = item.summary || 'Sin sinopsis disponible.';
+  modal.classList.add('open');
+}
+
 const save = () => localStorage.setItem('pq_v3', JSON.stringify(queue));
 
 // ── TOAST ──
@@ -825,6 +930,7 @@ function tab(t) {
   const tb = document.getElementById('tab-' + t);
   if (tb) tb.classList.add('active');
   if (t === 'queue') renderQ();
+  if (t === 'recent') loadRecent();
   if (t === 'admin' && unlocked) renderAdm();
 }
 
