@@ -579,10 +579,11 @@ body{
         <!-- Episode selector (series only) -->
         <div id="ep-section" style="display:none">
           <div class="field">
-            <div class="flabel">Episodio concreto</div>
+            <div class="flabel">¿Qué quieres ver?</div>
+            <div style="font-size:13px;color:var(--green);margin-bottom:8px;font-weight:500" id="ep-default-label">✓ Toda la serie</div>
             <div class="ep-toggle" onclick="toggleEp()">
               <div class="toggle-track" id="ep-track"><div class="toggle-thumb"></div></div>
-              <span class="toggle-label" id="ep-label">Quiero un episodio específico</span>
+              <span class="toggle-label" id="ep-label">Quiero un episodio concreto</span>
             </div>
           </div>
           <div id="ep-fields" style="display:none">
@@ -599,7 +600,7 @@ body{
                 <div class="flabel">Capítulo</div>
                 <div class="ep-spinbox">
                   <button class="ep-btn" onclick="adj('e',-1)"><i class="ti ti-minus" style="font-size:14px"></i></button>
-                  <div class="ep-val" id="e-val">1</div>
+                  <div class="ep-val" id="e-val">Toda</div>
                   <button class="ep-btn" onclick="adj('e',1)"><i class="ti ti-plus" style="font-size:14px"></i></button>
                 </div>
               </div>
@@ -1074,7 +1075,7 @@ function selMovie(id) {
   const m = pool.find(x => x.id === id);
   if (!m) return;
   if (queue.some(x => x.tmdbId === id)) { toast('Ya está en la cola', 'warn', '📋'); return; }
-  sel = m; epOn = false; sVal = 1; eVal = 1;
+  sel = m; epOn = false; sVal = 1; eVal = 'Toda';
   const title = m.title || m.name;
   const year  = (m.release_date || m.first_air_date || '').slice(0, 4);
   document.getElementById('sh-ttl').textContent = title;
@@ -1086,9 +1087,11 @@ function selMovie(id) {
   document.getElementById('ep-section').style.display = m.media_type === 'tv' ? 'block' : 'none';
   document.getElementById('ep-track').classList.remove('on');
   document.getElementById('ep-fields').style.display = 'none';
-  document.getElementById('ep-label').textContent = 'Quiero un episodio específico';
+  document.getElementById('ep-label').textContent = 'Quiero un episodio concreto';
+  const defLbl = document.getElementById('ep-default-label');
+  if (defLbl) defLbl.style.display = 'block';
   document.getElementById('s-val').textContent = '1';
-  document.getElementById('e-val').textContent = '1';
+  document.getElementById('e-val').textContent = 'Toda';
   document.getElementById('req-name').value = '';
   document.querySelectorAll('.name-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('rsheet').classList.add('open');
@@ -1106,12 +1109,20 @@ function toggleEp() {
   epOn = !epOn;
   document.getElementById('ep-track').classList.toggle('on', epOn);
   document.getElementById('ep-fields').style.display = epOn ? 'block' : 'none';
-  document.getElementById('ep-label').textContent = epOn ? 'Episodio concreto activado' : 'Quiero un episodio específico';
+  document.getElementById('ep-label').textContent = epOn ? 'Episodio concreto' : 'Quiero un episodio concreto';
+  const defLabel = document.getElementById('ep-default-label');
+  if (defLabel) defLabel.style.display = epOn ? 'none' : 'block';
 }
 
 function adj(type, d) {
-  if (type === 's') { sVal = Math.max(1, sVal + d); document.getElementById('s-val').textContent = sVal; }
-  else              { eVal = Math.max(1, eVal + d); document.getElementById('e-val').textContent = eVal; }
+  if (type === 's') {
+    sVal = Math.max(1, sVal + d);
+    document.getElementById('s-val').textContent = sVal;
+  } else {
+    eVal = eVal === 'Toda' ? (d > 0 ? 1 : 0) : Math.max(0, eVal + d);
+    document.getElementById('e-val').textContent = eVal === 0 ? 'Toda' : eVal;
+    eVal = eVal === 0 ? 'Toda' : eVal;
+  }
 }
 
 // ── NAME SELECTOR ──
@@ -1174,7 +1185,8 @@ async function addToQueue() {
   const title   = sel.title || sel.name;
   const year    = (sel.release_date || sel.first_air_date || '').slice(0, 4);
   const isTV    = sel.media_type === 'tv';
-  const episode = isTV && epOn ? `T${sVal} E${eVal}` : null;
+  const epDisplay = eVal === 'Toda' ? `T${sVal} · Toda la temporada` : `T${sVal} E${eVal}`;
+  const episode = isTV && epOn ? epDisplay : null;
   // Fetch release dates automatically
   const releaseDates = await fetchReleaseDates(sel.id, isTV);
   const autoNote = releaseDates || '';
