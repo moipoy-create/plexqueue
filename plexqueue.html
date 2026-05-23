@@ -1112,6 +1112,13 @@ function toggleEp() {
   document.getElementById('ep-label').textContent = epOn ? 'Episodio concreto' : 'Quiero un episodio concreto';
   const defLabel = document.getElementById('ep-default-label');
   if (defLabel) defLabel.style.display = epOn ? 'none' : 'block';
+  if (epOn) {
+    // Reset to Toda when opening
+    eVal = 'Toda';
+    document.getElementById('e-val').textContent = 'Toda';
+    sVal = 1;
+    document.getElementById('s-val').textContent = '1';
+  }
 }
 
 function adj(type, d) {
