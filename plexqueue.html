@@ -1388,8 +1388,26 @@ window.addEventListener('appinstalled', () => {
 // ── INIT ──
 loadQueue().then(() => { loadPop(); });
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(e => console.log('SW:', e));
+if ('serviceWorker' in navigator && 'PushManager' in window) {
+  navigator.serviceWorker.register('sw.js').then(async reg => {
+    console.log('SW registrado');
+    try {
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: 'BD1cQySHr4gR6NYgVEWaA6xaHPlSDV5zUAuHYFzCi7lLKzpZKW2Rko0HOVF0ZlqdEwHF3vNYw0sZdpwfyDT8apk'
+      });
+      // Save subscription to Firebase so FCM can reach this device
+      const subData = JSON.stringify(sub);
+      await fetch(FIREBASE + '/subscriptions.json', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: subData
+      });
+      console.log('Push subscription OK');
+    } catch(e) {
+      console.log('Push subscription error:', e);
+    }
+  }).catch(e => console.log('SW error:', e));
 }
 </script>
 </body>
