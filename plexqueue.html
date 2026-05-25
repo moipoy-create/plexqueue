@@ -913,7 +913,7 @@ function renderRecentList() {
     const epLabel = isEp ? `T${item.season} E${item.episode} · ${item.title}` : null;
     const meta = [item.year, item.genres ? item.genres.split(',')[0].trim() : null, item.rating ? '⭐ ' + item.rating : null].filter(Boolean).join(' · ');
     const poster = item._poster || null;
-    const itemKey = Object.keys(window._recentKeys||{})[idx] || null;
+    const itemKey = (window._recentKeys||{})[idx] || null;
     return `<div class="rec-item" onclick="openRecent(${idx})">
       ${poster
         ? `<img class="rec-poster" src="${poster}" alt="">`
