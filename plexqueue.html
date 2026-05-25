@@ -888,9 +888,7 @@ async function loadRecent() {
       return;
     }
     const entries = Object.entries(d).sort((a, b) => (b[1].addedAt || 0) - (a[1].addedAt || 0)).slice(0, 20);
-    window._recentKeys = {};
-    entries.forEach(([k,v], i) => window._recentKeys[i] = k);
-    recentData = entries.map(([k,v]) => v);
+    recentData = entries.map(([k,v]) => { v._firebaseKey = k; return v; });
     pill.textContent = recentData.length + ' título' + (recentData.length === 1 ? '' : 's');
     // Show list immediately without posters
     renderRecentList();
@@ -913,7 +911,7 @@ function renderRecentList() {
     const epLabel = isEp ? `T${item.season} E${item.episode} · ${item.title}` : null;
     const meta = [item.year, item.genres ? item.genres.split(',')[0].trim() : null, item.rating ? '⭐ ' + item.rating : null].filter(Boolean).join(' · ');
     const poster = item._poster || null;
-    const itemKey = (window._recentKeys||{})[idx] || null;
+    const itemKey = item._firebaseKey || null;
     return `<div class="rec-item" onclick="openRecent(${idx})">
       ${poster
         ? `<img class="rec-poster" src="${poster}" alt="">`
