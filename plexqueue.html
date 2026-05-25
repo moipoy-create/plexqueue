@@ -506,6 +506,8 @@ body{
 .rec-meta{font-size:11px;color:var(--t3);margin-bottom:2px}
 .rec-ep{font-size:11px;color:var(--blue);font-weight:500}
 .rec-badge{flex-shrink:0}
+.btn-del-rec{background:none;border:none;color:var(--t3);cursor:pointer;padding:2px 4px;transition:color .2s;font-size:13px}
+.btn-del-rec:hover{color:var(--red)}
 .pill-movie{background:#7c3aed22;color:var(--accent);font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px}
 .pill-episode{background:#60a5fa20;color:var(--blue);font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px}
 </style>
@@ -862,6 +864,18 @@ async function fetchTMDBForRecent(item) {
   return item;
 }
 
+
+async function delRecent(key) {
+  if (!key) return;
+  try {
+    await fetch(`${FIREBASE}/recent/${key}.json`, { method: 'DELETE' });
+    toast('Eliminada de subidas', 'ok', '🗑');
+    loadRecent();
+  } catch(e) {
+    toast('Error al eliminar', '', '⚠️');
+  }
+}
+
 async function loadRecent() {
   const el = document.getElementById('recent-list');
   const pill = document.getElementById('recent-pill');
@@ -873,7 +887,10 @@ async function loadRecent() {
       pill.textContent = '0 títulos';
       return;
     }
-    recentData = Object.values(d).sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0)).slice(0, 20);
+    const entries = Object.entries(d).sort((a, b) => (b[1].addedAt || 0) - (a[1].addedAt || 0)).slice(0, 20);
+    window._recentKeys = {};
+    entries.forEach(([k,v], i) => window._recentKeys[i] = k);
+    recentData = entries.map(([k,v]) => v);
     pill.textContent = recentData.length + ' título' + (recentData.length === 1 ? '' : 's');
     // Show list immediately without posters
     renderRecentList();
@@ -896,6 +913,7 @@ function renderRecentList() {
     const epLabel = isEp ? `T${item.season} E${item.episode} · ${item.title}` : null;
     const meta = [item.year, item.genres ? item.genres.split(',')[0].trim() : null, item.rating ? '⭐ ' + item.rating : null].filter(Boolean).join(' · ');
     const poster = item._poster || null;
+    const itemKey = Object.keys(window._recentKeys||{})[idx] || null;
     return `<div class="rec-item" onclick="openRecent(${idx})">
       ${poster
         ? `<img class="rec-poster" src="${poster}" alt="">`
@@ -905,8 +923,9 @@ function renderRecentList() {
         <div class="rec-meta">${meta}</div>
         ${epLabel ? `<div class="rec-ep"><i class="ti ti-tv" style="font-size:11px"></i> ${epLabel}</div>` : ''}
       </div>
-      <div class="rec-badge">
+      <div class="rec-badge" style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
         <span class="${isEp ? 'pill-episode' : 'pill-movie'}">${isEp ? 'Serie' : 'Película'}</span>
+        ${unlocked ? `<button class="btn-del-rec" onclick="event.stopPropagation();delRecent('${itemKey}')" title="Eliminar"><i class="ti ti-trash" style="font-size:13px"></i></button>` : ''}
       </div>
     </div>`;
   }).join('');
