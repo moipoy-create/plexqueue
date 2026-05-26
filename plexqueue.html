@@ -816,12 +816,21 @@ async function fetchStreamingProviders(tmdbId, isTV) {
   try {
     const type = isTV ? 'tv' : 'movie';
     const d = await tmdbGet(`/${type}/${tmdbId}/watch/providers`);
-    const es = (d.results || {})['ES'] || (d.results || {})['US'] || null;
-    if (!es) return [];
-    const flat = es.flatrate || es.buy || es.rent || [];
-    return flat.slice(0, 6).map(p => ({
+    const res = d.results || {};
+    const region = res['ES'] || res['US'] || res['GB'] || null;
+    if (!region) return [];
+    const flat = region.flatrate || [];
+    const rent = region.rent || [];
+    const buy  = region.buy || [];
+    const seen = new Set();
+    const all = [...flat, ...rent, ...buy].filter(p => {
+      if (seen.has(p.provider_id)) return false;
+      seen.add(p.provider_id); return true;
+    });
+    return all.slice(0, 6).map(p => ({
       name: p.provider_name,
-      logo: p.logo_path ? `https://image.tmdb.org/t/p/w45${p.logo_path}` : null
+      logo: p.logo_path ? `https://image.tmdb.org/t/p/w45${p.logo_path}` : null,
+      type: flat.some(f => f.provider_id === p.provider_id) ? 'stream' : rent.some(r => r.provider_id === p.provider_id) ? 'rent' : 'buy'
     }));
   } catch(e) { return []; }
 }
@@ -891,10 +900,12 @@ async function openDetail(idx) {
     if (providers.length) {
       const sec = document.getElementById('modal-stream-section');
       const logos = document.getElementById('modal-stream-logos');
-      logos.innerHTML = providers.map(p => p.logo
-        ? `<div class="modal-stream-item"><img class="modal-stream-logo" src="${p.logo}" alt="${p.name}" title="${p.name}"><div class="modal-stream-name">${p.name}</div></div>`
-        : `<div class="modal-stream-item"><div class="modal-stream-logo" style="background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--t3)">${p.name[0]}</div><div class="modal-stream-name">${p.name}</div></div>`
-      ).join('');
+      logos.innerHTML = providers.map(p => {
+        const badge = p.type === 'stream' ? '' : p.type === 'rent' ? '<span style="font-size:9px;color:var(--gold);display:block">Alquiler</span>' : '<span style="font-size:9px;color:var(--t3);display:block">Compra</span>';
+        return p.logo
+          ? `<div class="modal-stream-item"><img class="modal-stream-logo" src="${p.logo}" alt="${p.name}" title="${p.name}"><div class="modal-stream-name">${p.name}</div>${badge}</div>`
+          : `<div class="modal-stream-item"><div class="modal-stream-logo" style="background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--t3)">${p.name[0]}</div><div class="modal-stream-name">${p.name}</div>${badge}</div>`;
+      }).join('');
       sec.style.display = 'block';
     }
   } catch(e) {
@@ -1035,10 +1046,12 @@ function openRecent(idx) {
   if (item._tmdbId) {
     fetchStreamingProviders(item._tmdbId, isEp).then(providers => {
       if (providers.length) {
-        document.getElementById('modal-stream-logos').innerHTML = providers.map(p => p.logo
-          ? `<div class="modal-stream-item"><img class="modal-stream-logo" src="${p.logo}" alt="${p.name}" title="${p.name}"><div class="modal-stream-name">${p.name}</div></div>`
-          : `<div class="modal-stream-item"><div class="modal-stream-logo" style="background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--t3)">${p.name[0]}</div><div class="modal-stream-name">${p.name}</div></div>`
-        ).join('');
+        document.getElementById('modal-stream-logos').innerHTML = providers.map(p => {
+          const badge = p.type === 'stream' ? '' : p.type === 'rent' ? '<span style="font-size:9px;color:var(--gold);display:block">Alquiler</span>' : '<span style="font-size:9px;color:var(--t3);display:block">Compra</span>';
+          return p.logo
+            ? `<div class="modal-stream-item"><img class="modal-stream-logo" src="${p.logo}" alt="${p.name}" title="${p.name}"><div class="modal-stream-name">${p.name}</div>${badge}</div>`
+            : `<div class="modal-stream-item"><div class="modal-stream-logo" style="background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--t3)">${p.name[0]}</div><div class="modal-stream-name">${p.name}</div>${badge}</div>`;
+        }).join('');
         document.getElementById('modal-stream-section').style.display = 'block';
       }
     });
@@ -1311,7 +1324,7 @@ async function addToQueue() {
   // Notificar a Moi (admin) si quien pide NO es Moi
   if (name !== 'Moi') {
     const waMsg = encodeURIComponent(`📋 Nueva petición en PlexQueue\n\n*${title}* (${year})\n${isTV ? '📺 Serie' : '🎬 Película'}${episode ? ' · ' + episode : ''}\n👤 Pedida por ${name}`);
-    fetch(`https://api.callmebot.com/whatsapp.php?phone=+34676237790&text=${waMsg}&apikey=6395621`).catch(()=>{});
+    new Image().src = `https://api.callmebot.com/whatsapp.php?phone=+34676237790&text=${waMsg}&apikey=6395621`;
   }
 
   const rg = document.getElementById('res-grid');
