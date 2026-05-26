@@ -510,6 +510,26 @@ body{
 .btn-del-rec:hover{color:var(--red)}
 .pill-movie{background:#7c3aed22;color:var(--accent);font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px}
 .pill-episode{background:#60a5fa20;color:var(--blue);font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px}
+
+/* ── STREAMING PROVIDERS ── */
+.stream-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px;align-items:center}
+.stream-logo{width:22px;height:22px;border-radius:5px;object-fit:cover;border:1px solid var(--border)}
+.stream-none{font-size:10px;color:var(--t3);font-style:italic}
+.modal-stream-section{margin-bottom:16px}
+.modal-stream-logos{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px}
+.modal-stream-logo{width:32px;height:32px;border-radius:8px;object-fit:cover;border:1px solid var(--border2)}
+.modal-stream-name{font-size:11px;color:var(--t2);text-align:center;margin-top:3px;max-width:44px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.modal-stream-item{display:flex;flex-direction:column;align-items:center;gap:0}
+
+/* ── FILTRO POR USUARIO ── */
+.user-filter{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.uf-btn{
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:20px;padding:5px 13px;font-size:11px;font-weight:600;
+  color:var(--t3);cursor:pointer;transition:all .2s;
+}
+.uf-btn:hover{border-color:var(--border3);color:var(--t2)}
+.uf-btn.act{background:var(--accent2);border-color:var(--accent2);color:#fff}
 </style>
 </head>
 <body>
@@ -658,9 +678,15 @@ body{
 
     <!-- ═══ QUEUE VIEW ═══ -->
     <div class="view" id="view-queue">
-      <div class="sec-hdr" style="margin-bottom:14px">
+      <div class="sec-hdr" style="margin-bottom:10px">
         <span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--t1)">Cola de peticiones</span>
         <span id="q-pill" style="font-size:11px;color:var(--t3);background:var(--s3);border:1px solid var(--border);padding:3px 10px;border-radius:20px">0 títulos</span>
+      </div>
+      <div class="user-filter" id="user-filter">
+        <div class="uf-btn act" onclick="setUF('all',this)">Todos</div>
+        <div class="uf-btn" onclick="setUF('Moi',this)">Moi</div>
+        <div class="uf-btn" onclick="setUF('Javi',this)">Javi</div>
+        <div class="uf-btn" onclick="setUF('Arma',this)">Arma</div>
       </div>
       <div id="qlist"></div>
     </div>
@@ -739,6 +765,10 @@ body{
           </div>
         </div>
         <div id="modal-note-wrap"></div>
+        <div class="modal-stream-section" id="modal-stream-section" style="display:none">
+          <div class="modal-section-title">Dónde verla</div>
+          <div class="modal-stream-logos" id="modal-stream-logos"></div>
+        </div>
         <div class="modal-section">
           <div class="modal-section-title">Sinopsis</div>
           <div class="modal-overview" id="modal-overview"></div>
@@ -772,6 +802,7 @@ let sel      = null;
 let pinV     = '';
 let unlocked = false;
 let curF     = 'all';
+let curUF    = 'all';
 let sTimer   = null;
 let epOn     = false;
 let sVal     = 1;
@@ -779,6 +810,29 @@ let eVal     = 1;
 let noteOpen = null;
 let deferredPrompt = null;
 
+
+// ── STREAMING PROVIDERS ──
+async function fetchStreamingProviders(tmdbId, isTV) {
+  try {
+    const type = isTV ? 'tv' : 'movie';
+    const d = await tmdbGet(`/${type}/${tmdbId}/watch/providers`);
+    const es = (d.results || {})['ES'] || (d.results || {})['US'] || null;
+    if (!es) return [];
+    const flat = es.flatrate || es.buy || es.rent || [];
+    return flat.slice(0, 6).map(p => ({
+      name: p.provider_name,
+      logo: p.logo_path ? `https://image.tmdb.org/t/p/w45${p.logo_path}` : null
+    }));
+  } catch(e) { return []; }
+}
+
+// ── FILTRO USUARIO COLA ──
+function setUF(user, el) {
+  curUF = user;
+  document.querySelectorAll('.uf-btn').forEach(b => b.classList.remove('act'));
+  el.classList.add('act');
+  renderQ();
+}
 
 // ── MOVIE DETAIL MODAL ──
 async function openDetail(idx) {
@@ -823,12 +877,26 @@ async function openDetail(idx) {
   // Overview from TMDB
   const overviewEl = document.getElementById('modal-overview');
   overviewEl.textContent = 'Cargando sinopsis...';
+  // Reset streaming section
+  document.getElementById('modal-stream-section').style.display = 'none';
+  document.getElementById('modal-stream-logos').innerHTML = '';
   modal.classList.add('open');
   
   try {
     const type = item.type === 'Serie' ? 'tv' : 'movie';
     const d = await tmdbGet(`/${type}/${item.tmdbId}?language=es-ES`);
     overviewEl.textContent = d.overview || 'Sin sinopsis disponible.';
+    // Load streaming providers
+    const providers = await fetchStreamingProviders(item.tmdbId, item.type === 'Serie');
+    if (providers.length) {
+      const sec = document.getElementById('modal-stream-section');
+      const logos = document.getElementById('modal-stream-logos');
+      logos.innerHTML = providers.map(p => p.logo
+        ? `<div class="modal-stream-item"><img class="modal-stream-logo" src="${p.logo}" alt="${p.name}" title="${p.name}"><div class="modal-stream-name">${p.name}</div></div>`
+        : `<div class="modal-stream-item"><div class="modal-stream-logo" style="background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--t3)">${p.name[0]}</div><div class="modal-stream-name">${p.name}</div></div>`
+      ).join('');
+      sec.style.display = 'block';
+    }
   } catch(e) {
     overviewEl.textContent = 'No se pudo cargar la sinopsis.';
   }
@@ -958,8 +1026,23 @@ function openRecent(idx) {
   if (isEp) tagsHtml += `<span class="modal-tag blue">T${item.season} E${item.episode}</span>`;
   document.getElementById('modal-tags').innerHTML = tagsHtml;
   document.getElementById('modal-note-wrap').innerHTML = '';
+  // Reset streaming
+  document.getElementById('modal-stream-section').style.display = 'none';
+  document.getElementById('modal-stream-logos').innerHTML = '';
   document.getElementById('modal-overview').textContent = item.summary || 'Sin sinopsis disponible.';
   modal.classList.add('open');
+  // Load streaming providers async
+  if (item._tmdbId) {
+    fetchStreamingProviders(item._tmdbId, isEp).then(providers => {
+      if (providers.length) {
+        document.getElementById('modal-stream-logos').innerHTML = providers.map(p => p.logo
+          ? `<div class="modal-stream-item"><img class="modal-stream-logo" src="${p.logo}" alt="${p.name}" title="${p.name}"><div class="modal-stream-name">${p.name}</div></div>`
+          : `<div class="modal-stream-item"><div class="modal-stream-logo" style="background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--t3)">${p.name[0]}</div><div class="modal-stream-name">${p.name}</div></div>`
+        ).join('');
+        document.getElementById('modal-stream-section').style.display = 'block';
+      }
+    });
+  }
 }
 
 async function save() {
@@ -1018,8 +1101,10 @@ function tab(t) {
 
 function updNav() {
   const n = queue.length;
+  const pend = queue.filter(x => x.status === 'pending').length;
   document.getElementById('nav-c').textContent = n;
   document.getElementById('q-pill').textContent = n + ' título' + (n === 1 ? '' : 's');
+  document.title = pend > 0 ? `(${pend}) PlexQueue` : 'PlexQueue';
 }
 
 // ── TMDB: POPULAR ──
@@ -1222,6 +1307,13 @@ async function addToQueue() {
     requestedBy: name, episode, status: 'pending', note: autoNote, adminNote: '', addedAt: Date.now()
   });
   await save(); closeSheet(); updNav();
+
+  // Notificar a Moi (admin) si quien pide NO es Moi
+  if (name !== 'Moi') {
+    const waMsg = encodeURIComponent(`📋 Nueva petición en PlexQueue\n\n*${title}* (${year})\n${isTV ? '📺 Serie' : '🎬 Película'}${episode ? ' · ' + episode : ''}\n👤 Pedida por ${name}`);
+    fetch(`https://api.callmebot.com/whatsapp.php?phone=+34676237790&text=${waMsg}&apikey=6395621`).catch(()=>{});
+  }
+
   const rg = document.getElementById('res-grid');
   if (rg.children.length) rg.innerHTML = results.map(mCard).join('');
   const pg = document.getElementById('pop-grid');
@@ -1233,11 +1325,14 @@ async function addToQueue() {
 function renderQ() {
   updNav();
   const el = document.getElementById('qlist');
-  if (!queue.length) {
-    el.innerHTML = '<div class="empty"><i class="ti ti-popcorn"></i><div class="empty-t">La cola está vacía.<br>¡Busca algo!</div></div>';
+  const filtered = curUF === 'all' ? queue : queue.filter(x => x.requestedBy === curUF);
+  if (!filtered.length) {
+    el.innerHTML = queue.length
+      ? '<div class="empty"><i class="ti ti-filter"></i><div class="empty-t">Nada de ' + curUF + ' en la cola</div></div>'
+      : '<div class="empty"><i class="ti ti-popcorn"></i><div class="empty-t">La cola está vacía.<br>¡Busca algo!</div></div>';
     return;
   }
-  el.innerHTML = queue.slice().reverse().map((item) => {
+  el.innerHTML = filtered.slice().reverse().map((item) => {
     const idx = queue.findIndex(x => x.tmdbId === item.tmdbId && x.addedAt === item.addedAt);
     return `<div class="qitem${item.status === 'available' ? ' avail' : ''}" onclick="openDetail(${idx})" style="cursor:pointer">
       ${item.poster
